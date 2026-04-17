@@ -1000,7 +1000,7 @@ function renderPanel(panel) {
   }
   if (panel==='settings') {
     const keyEl = document.getElementById('openai-api-key');
-    if (keyEl) { keyEl.value = localStorage.getItem('vc_openai_apikey')||''; keyEl.addEventListener('change',()=>{ localStorage.setItem('vc_openai_apikey',keyEl.value.trim()); showToast('success','API key saved'); }); }
+    if (keyEl) { keyEl.value = localStorage.getItem('vc_openai_apikey')||''; keyEl.addEventListener('input',()=>{ localStorage.setItem('vc_openai_apikey',keyEl.value.trim()); }); }
   }
 }
 
@@ -1099,7 +1099,7 @@ function renderSettingsPanel() {
   return `<div>
     <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">AI</div>
     <div class="ai-key-notice">Paste your OpenAI API key to enable AI features.<br><a onclick="window.open('https://platform.openai.com/api-keys')">Get a key →</a></div>
-    <input class="api-key-input" id="openai-api-key" type="password" placeholder="sk-...">
+    <input class="api-key-input" id="openai-api-key" type="password" placeholder="sk-..." oninput="localStorage.setItem('vc_openai_apikey',this.value.trim())">
     <div class="setting-row" style="margin-top:8px">
       <div><div class="setting-label">AI mode</div><div class="setting-sub">Use GPT-4o for voice</div></div>
       <button class="toggle ${aiMode?'on':''}" onclick="aiMode=!aiMode;this.className='toggle '+(aiMode?'on':'');showToast('info','AI mode '+(aiMode?'on':'off'))"></button>
