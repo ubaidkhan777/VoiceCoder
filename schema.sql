@@ -1,155 +1,157 @@
--- VoiceCoder AI — Microsoft SQL Server Auth Schema
+-- VoiceCoder AI — Supabase / PostgreSQL Schema (FIXED)
+-- Fix: Removed NOW() from index predicate (not allowed in PostgreSQL)
 
-
-USE master;
-GO
-
--- Create database 
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'VoiceCoderDB')
-BEGIN
-    CREATE DATABASE VoiceCoderDB;
-END
-GO
-
-USE VoiceCoderDB;
-GO
-
+-- ─────────────────────────────────────────
 --  USERS TABLE
-IF OBJECT_ID('dbo.Users', 'U') IS NULL
+-- ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.users (
+    id          SERIAL          PRIMARY KEY,
+    name        VARCHAR(100)    NOT NULL,
+    email       VARCHAR(255)    NOT NULL,
+    password    VARCHAR(255)    NOT NULL,
+    created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    last_login  TIMESTAMPTZ     NULL,
+    is_active   BOOLEAN         NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT uq_users_email UNIQUE (email)
+);
+
+-- ─────────────────────────────────────────
+--  SESSIONS TABLE
+-- ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.sessions (
+    id          SERIAL          PRIMARY KEY,
+    user_id     INT             NOT NULL
+                    REFERENCES public.users(id) ON DELETE CASCADE,
+    token       VARCHAR(512)    NOT NULL,
+    expires_at  TIMESTAMPTZ     NOT NULL,
+    created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    ip_address  VARCHAR(45)     NULL,
+    user_agent  VARCHAR(500)    NULL,
+
+    CONSTRAINT uq_sessions_token UNIQUE (token)
+);
+
+-- ✅ FIXED: Removed WHERE NOW() — plain index works fine
+CREATE INDEX IF NOT EXISTS ix_sessions_token
+    ON public.sessions (token);
+
+CREATE INDEX IF NOT EXISTS ix_sessions_expires_at
+    ON public.sessions (expires_at);
+
+-- ─────────────────────────────────────────
+--  FUNCTIONS
+-- ─────────────────────────────────────────
+
+-- FUNCTION: Register a new user
+CREATE OR REPLACE FUNCTION public.sp_create_user(
+    p_name      VARCHAR(100),
+    p_email     VARCHAR(255),
+    p_password  VARCHAR(255)
+)
+RETURNS TABLE(success INT, user_id INT, error_code TEXT)
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    CREATE TABLE dbo.Users (
-        id          INT IDENTITY(1,1) PRIMARY KEY,
-        name        NVARCHAR(100)   NOT NULL,
-        email       NVARCHAR(255)   NOT NULL,
-        password    NVARCHAR(255)   NOT NULL,   -- bcrypt hash
-        created_at  DATETIME2       NOT NULL DEFAULT GETDATE(),
-        last_login  DATETIME2       NULL,
-        is_active   BIT             NOT NULL DEFAULT 1,
-
-        CONSTRAINT UQ_Users_Email UNIQUE (email)
-    );
-END
-GO
-
---  SESSIONS TABLE  
-IF OBJECT_ID('dbo.Sessions', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Sessions (
-        id          INT IDENTITY(1,1) PRIMARY KEY,
-        user_id     INT             NOT NULL
-                        REFERENCES dbo.Users(id) ON DELETE CASCADE,
-        token       NVARCHAR(512)   NOT NULL,   -- JWT or random token
-        expires_at  DATETIME2       NOT NULL,
-        created_at  DATETIME2       NOT NULL DEFAULT GETDATE(),
-        ip_address  NVARCHAR(45)    NULL,
-        user_agent  NVARCHAR(500)   NULL,
-
-        CONSTRAINT UQ_Sessions_Token UNIQUE (token)
-    );
-END
-GO
-
--- Index: quickly look up sessions by token
-CREATE INDEX IF NOT EXISTS IX_Sessions_Token
-    ON dbo.Sessions (token)
-    WHERE expires_at > GETDATE();
-GO
-
---  STORED PROCEDURES
--- SP: Register a new user
-CREATE OR ALTER PROCEDURE dbo.sp_CreateUser
-    @name       NVARCHAR(100),
-    @email      NVARCHAR(255),
-    @password   NVARCHAR(255)   -- pass the bcrypt hash from Node
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF EXISTS (SELECT 1 FROM dbo.Users WHERE email = LOWER(@email))
-    BEGIN
-        SELECT 0 AS success, 'EMAIL_EXISTS' AS error_code;
+    IF EXISTS (SELECT 1 FROM public.users WHERE email = LOWER(p_email)) THEN
+        RETURN QUERY SELECT 0, NULL::INT, 'EMAIL_EXISTS'::TEXT;
         RETURN;
-    END
+    END IF;
 
-    INSERT INTO dbo.Users (name, email, password)
-    VALUES (@name, LOWER(@email), @password);
+    INSERT INTO public.users (name, email, password)
+    VALUES (p_name, LOWER(p_email), p_password)
+    RETURNING id INTO user_id;
 
-    SELECT 1 AS success, SCOPE_IDENTITY() AS user_id, '' AS error_code;
-END
-GO
+    RETURN QUERY SELECT 1, user_id, ''::TEXT;
+END;
+$$;
 
--- SP: Fetch user by email
-CREATE OR ALTER PROCEDURE dbo.sp_GetUserByEmail
-    @email NVARCHAR(255)
-AS
+-- FUNCTION: Fetch user by email
+CREATE OR REPLACE FUNCTION public.sp_get_user_by_email(
+    p_email VARCHAR(255)
+)
+RETURNS TABLE(id INT, name VARCHAR, email VARCHAR, password VARCHAR, is_active BOOLEAN)
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    SET NOCOUNT ON;
-    SELECT id, name, email, password, is_active
-    FROM   dbo.Users
-    WHERE  email = LOWER(@email);
-END
-GO
+    RETURN QUERY
+    SELECT u.id, u.name, u.email, u.password, u.is_active
+    FROM   public.users u
+    WHERE  u.email = LOWER(p_email);
+END;
+$$;
 
--- SP: Update last_login timestamp
-CREATE OR ALTER PROCEDURE dbo.sp_UpdateLastLogin
-    @user_id INT
-AS
+-- FUNCTION: Update last_login timestamp
+CREATE OR REPLACE FUNCTION public.sp_update_last_login(
+    p_user_id INT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    SET NOCOUNT ON;
-    UPDATE dbo.Users
-    SET    last_login = GETDATE()
-    WHERE  id = @user_id;
-END
-GO
+    UPDATE public.users
+    SET    last_login = NOW()
+    WHERE  id = p_user_id;
+END;
+$$;
 
--- SP: Store a new session token
-CREATE OR ALTER PROCEDURE dbo.sp_CreateSession
-    @user_id    INT,
-    @token      NVARCHAR(512),
-    @expires_at DATETIME2,
-    @ip_address NVARCHAR(45)  = NULL,
-    @user_agent NVARCHAR(500) = NULL
-AS
+-- FUNCTION: Store a new session token
+CREATE OR REPLACE FUNCTION public.sp_create_session(
+    p_user_id    INT,
+    p_token      VARCHAR(512),
+    p_expires_at TIMESTAMPTZ,
+    p_ip_address VARCHAR(45)  DEFAULT NULL,
+    p_user_agent VARCHAR(500) DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    SET NOCOUNT ON;
-    INSERT INTO dbo.Sessions (user_id, token, expires_at, ip_address, user_agent)
-    VALUES (@user_id, @token, @expires_at, @ip_address, @user_agent);
-END
-GO
+    INSERT INTO public.sessions (user_id, token, expires_at, ip_address, user_agent)
+    VALUES (p_user_id, p_token, p_expires_at, p_ip_address, p_user_agent);
+END;
+$$;
 
--- SP: Validate a session token
-CREATE OR ALTER PROCEDURE dbo.sp_ValidateSession
-    @token NVARCHAR(512)
-AS
+-- FUNCTION: Validate a session token
+CREATE OR REPLACE FUNCTION public.sp_validate_session(
+    p_token VARCHAR(512)
+)
+RETURNS TABLE(token VARCHAR, expires_at TIMESTAMPTZ, id INT, name VARCHAR, email VARCHAR)
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    SET NOCOUNT ON;
+    RETURN QUERY
     SELECT s.token, s.expires_at, u.id, u.name, u.email
-    FROM   dbo.Sessions s
-    JOIN   dbo.Users    u ON u.id = s.user_id
-    WHERE  s.token      = @token
-      AND  s.expires_at > GETDATE()
-      AND  u.is_active  = 1;
-END
-GO
+    FROM   public.sessions s
+    JOIN   public.users    u ON u.id = s.user_id
+    WHERE  s.token      = p_token
+      AND  s.expires_at > NOW()
+      AND  u.is_active  = TRUE;
+END;
+$$;
 
--- SP: Delete / invalidate a session (sign out)
-CREATE OR ALTER PROCEDURE dbo.sp_DeleteSession
-    @token NVARCHAR(512)
-AS
+-- FUNCTION: Delete / invalidate a session (sign out)
+CREATE OR REPLACE FUNCTION public.sp_delete_session(
+    p_token VARCHAR(512)
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    SET NOCOUNT ON;
-    DELETE FROM dbo.Sessions WHERE token = @token;
-END
-GO
+    DELETE FROM public.sessions WHERE token = p_token;
+END;
+$$;
 
--- SP: Clean up expired sessions (run as a scheduled job)
-CREATE OR ALTER PROCEDURE dbo.sp_PurgeExpiredSessions
-AS
+-- FUNCTION: Clean up expired sessions
+CREATE OR REPLACE FUNCTION public.sp_purge_expired_sessions()
+RETURNS TABLE(deleted_rows BIGINT)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count BIGINT;
 BEGIN
-    SET NOCOUNT ON;
-    DELETE FROM dbo.Sessions WHERE expires_at <= GETDATE();
-    SELECT @@ROWCOUNT AS deleted_rows;
-END
-GO
-
-PRINT 'VoiceCoderDB schema created successfully.';
+    DELETE FROM public.sessions WHERE expires_at <= NOW();
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    RETURN QUERY SELECT v_count;
+END;
+$$;
