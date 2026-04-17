@@ -1029,17 +1029,17 @@ function renderAiPanel() {
 }
 
 const COMMANDS = [
-  {trigger:['include iostream','add iostream'],code:'#include <iostream>\n',desc:'Add iostream'},
+  {trigger:['include iostream','add iostream','include eye o stream'],code:'#include <iostream>\n',desc:'Add iostream'},
   {trigger:['include string','add string header'],code:'#include <string>\n',desc:'Add string header'},
   {trigger:['include vector'],code:'#include <vector>\n',desc:'Add vector'},
   {trigger:['include algorithm'],code:'#include <algorithm>\n',desc:'Add algorithm'},
-  {trigger:['using namespace std','namespace std'],code:'using namespace std;\n',desc:'namespace std'},
-  {trigger:['main function','create main'],code:'int main() {\n    \n    return 0;\n}\n',desc:'main function'},
-  {trigger:['for loop','create for'],code:'for (int i = 0; i < 10; i++) {\n    \n}\n',desc:'For loop'},
+  {trigger:['using namespace std','namespace std','using name space std','name space std','using namespace','name space'],code:'using namespace std;\n',desc:'namespace std'},
+  {trigger:['main function','create main','main'],code:'int main() {\n    \n    return 0;\n}\n',desc:'main function'},
+  {trigger:['for loop','create for','4 loop'],code:'for (int i = 0; i < 10; i++) {\n    \n}\n',desc:'For loop'},
   {trigger:['while loop','create while'],code:'while (condition) {\n    \n}\n',desc:'While loop'},
-  {trigger:['if statement','add if'],code:'if (condition) {\n    \n}\n',desc:'If statement'},
+  {trigger:['if statement','add if','if condition'],code:'if (condition) {\n    \n}\n',desc:'If statement'},
   {trigger:['if else'],code:'if (condition) {\n    \n} else {\n    \n}\n',desc:'If-else'},
-  {trigger:['print','cout'],code:'cout << "Hello, World!" << endl;\n',desc:'Print'},
+  {trigger:['print','cout','print line','console output','print hello'],code:'cout << "Hello, World!" << endl;\n',desc:'Print'},
   {trigger:['integer variable','add int'],code:'int x = 0;\n',desc:'Int variable'},
   {trigger:['string variable','declare string'],code:'string str = "";\n',desc:'String variable'},
   {trigger:['void function','create function'],code:'void myFunction() {\n    \n}\n',desc:'Function'},
@@ -1197,7 +1197,7 @@ function processVoiceCommand(raw, confidence) {
 }
 
 function processFallbackCommand(raw, confidence) {
-  const input = raw.toLowerCase().trim();
+  const input = raw.toLowerCase().trim().replace(/name space/g,'namespace').replace(/i o stream/g,'iostream').replace(/c out/g,'cout').replace(/c in/g,'cin');
   let matched = null;
   for (const cmd of COMMANDS) {
     for (const t of cmd.trigger) {
@@ -1867,7 +1867,7 @@ function guardedShowEditor(){
 }
 
 // AUTH — Microsoft SQL Server via REST API
-const API_BASE = 'https://voicecoder-production.up.railway.app';
+const API_BASE = 'voicecoder-production.up.railway.app';
 
 /* ── Token helpers (localStorage stores JWT only, no passwords) ── */
 function authSaveToken(token){ localStorage.setItem('vc_token', token); }
