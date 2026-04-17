@@ -1,9 +1,9 @@
 require('dotenv').config();
-const express   = require('express');
-const mssql     = require('mssql');
-const bcrypt    = require('bcryptjs');
-const jwt       = require('jsonwebtoken');
-const cors      = require('cors');
+const express = require('express');
+const { Pool } = require('pg');
+const bcrypt  = require('bcryptjs');
+const jwt     = require('jsonwebtoken');
+const cors    = require('cors');
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -13,31 +13,19 @@ app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 app.use(express.static(__dirname));
 
-//  SQL SERVER CONNECTION POOL
-const sqlConfig = {
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  server:   process.env.DB_SERVER,
-  database: process.env.DB_NAME || 'VoiceCoderDB',
-  options: {
-    encrypt:                process.env.DB_ENCRYPT === 'true',
-    trustServerCertificate: process.env.DB_TRUST_CERT === 'true',
-  },
-  port: 1433,
-};
+//  POSTGRESQL CONNECTION POOL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
-let pool;
-async function getPool() {
-  if (!pool) {
-    pool = await mssql.connect(sqlConfig);
-    console.log('✅  Connected to SQL Server:', sqlConfig.server, '/', sqlConfig.database);
-  }
-  return pool;
-}
+pool.connect()
+  .then(() => console.log('✅  Connected to Supabase PostgreSQL'))
+  .catch(err => console.error('❌  DB connection error:', err.message));
 
 //  HELPERS
-const JWT_SECRET      = process.env.JWT_SECRET || 'change_me_in_production';
-const JWT_EXPIRES_IN  = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET     = process.env.JWT_SECRET || 'change_me_in_production';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -65,6 +53,7 @@ async function authMiddleware(req, res, next) {
 }
 
 //  ROUTES
+
 // POST /auth/signup
 app.post('/auth/signup', async (req, res) => {
   const { name, email, password } = req.body;
@@ -77,16 +66,14 @@ app.post('/auth/signup', async (req, res) => {
     return res.status(400).json({ field: 'password', error: 'Password must be at least 6 characters' });
 
   try {
-    const db   = await getPool();
     const hash = await bcrypt.hash(password, 12);
 
-    const result = await db.request()
-      .input('name',     mssql.NVarChar(100), name.trim())
-      .input('email',    mssql.NVarChar(255), email.toLowerCase().trim())
-      .input('password', mssql.NVarChar(255), hash)
-      .execute('sp_CreateUser');
+    const result = await pool.query(
+      'SELECT * FROM public.sp_create_user($1, $2, $3)',
+      [name.trim(), email.toLowerCase().trim(), hash]
+    );
 
-    const row = result.recordset[0];
+    const row = result.rows[0];
 
     if (!row.success) {
       if (row.error_code === 'EMAIL_EXISTS')
@@ -97,13 +84,10 @@ app.post('/auth/signup', async (req, res) => {
     const userId = row.user_id;
     const token  = signToken({ id: userId, name: name.trim(), email: email.toLowerCase().trim() });
 
-    await db.request()
-      .input('user_id',    mssql.Int,          userId)
-      .input('token',      mssql.NVarChar(512), token)
-      .input('expires_at', mssql.DateTime2,     tokenExpiresAt())
-      .input('ip_address', mssql.NVarChar(45),  req.ip || null)
-      .input('user_agent', mssql.NVarChar(500), req.headers['user-agent'] || null)
-      .execute('sp_CreateSession');
+    await pool.query(
+      'SELECT public.sp_create_session($1, $2, $3, $4, $5)',
+      [userId, token, tokenExpiresAt(), req.ip || null, req.headers['user-agent'] || null]
+    );
 
     res.status(201).json({
       message: 'Account created',
@@ -125,13 +109,12 @@ app.post('/auth/signin', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
 
   try {
-    const db = await getPool();
+    const result = await pool.query(
+      'SELECT * FROM public.sp_get_user_by_email($1)',
+      [email.toLowerCase().trim()]
+    );
 
-    const result = await db.request()
-      .input('email', mssql.NVarChar(255), email.toLowerCase().trim())
-      .execute('sp_GetUserByEmail');
-
-    const user = result.recordset[0];
+    const user = result.rows[0];
 
     if (!user)
       return res.status(401).json({ field: 'email', error: 'No account found with this email' });
@@ -143,19 +126,14 @@ app.post('/auth/signin', async (req, res) => {
     if (!match)
       return res.status(401).json({ field: 'password', error: 'Incorrect password' });
 
-    await db.request()
-      .input('user_id', mssql.Int, user.id)
-      .execute('sp_UpdateLastLogin');
+    await pool.query('SELECT public.sp_update_last_login($1)', [user.id]);
 
     const token = signToken({ id: user.id, name: user.name, email: user.email });
 
-    await db.request()
-      .input('user_id',    mssql.Int,          user.id)
-      .input('token',      mssql.NVarChar(512), token)
-      .input('expires_at', mssql.DateTime2,     tokenExpiresAt())
-      .input('ip_address', mssql.NVarChar(45),  req.ip || null)
-      .input('user_agent', mssql.NVarChar(500), req.headers['user-agent'] || null)
-      .execute('sp_CreateSession');
+    await pool.query(
+      'SELECT public.sp_create_session($1, $2, $3, $4, $5)',
+      [user.id, token, tokenExpiresAt(), req.ip || null, req.headers['user-agent'] || null]
+    );
 
     res.json({
       message: 'Signed in',
@@ -172,11 +150,7 @@ app.post('/auth/signin', async (req, res) => {
 // POST /auth/signout
 app.post('/auth/signout', authMiddleware, async (req, res) => {
   try {
-    const db = await getPool();
-    await db.request()
-      .input('token', mssql.NVarChar(512), req.token)
-      .execute('sp_DeleteSession');
-
+    await pool.query('SELECT public.sp_delete_session($1)', [req.token]);
     res.json({ message: 'Signed out' });
   } catch (err) {
     console.error('Signout error:', err);
@@ -187,15 +161,15 @@ app.post('/auth/signout', authMiddleware, async (req, res) => {
 // GET /auth/me
 app.get('/auth/me', authMiddleware, async (req, res) => {
   try {
-    const db = await getPool();
-    const result = await db.request()
-      .input('token', mssql.NVarChar(512), req.token)
-      .execute('sp_ValidateSession');
+    const result = await pool.query(
+      'SELECT * FROM public.sp_validate_session($1)',
+      [req.token]
+    );
 
-    if (!result.recordset.length)
+    if (!result.rows.length)
       return res.status(401).json({ error: 'Session expired' });
 
-    const { id, name, email } = result.recordset[0];
+    const { id, name, email } = result.rows[0];
     res.json({ user: { id, name, email } });
 
   } catch (err) {
@@ -209,6 +183,6 @@ app.get('/health', (_, res) => res.json({ status: 'ok', ts: new Date() }));
 
 //  START SERVER
 app.listen(PORT, () => {
-  console.log(`🚀  VoiceCoder auth server running on http://localhost:${PORT}`);
-  console.log(`🌐  Open the app at: http://localhost:${PORT}/voicecoder_ai_sql.html`);
+  console.log(`🚀  VoiceCoder server running on http://localhost:${PORT}`);
+  console.log(`🌐  Open: http://localhost:${PORT}/voicecoder_ai_sql.html`);
 });
