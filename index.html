@@ -298,121 +298,37 @@
   .ai-key-notice{background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--ai);line-height:1.5}
   .ai-key-notice a{color:var(--ai2);cursor:pointer;text-decoration:underline}
 
-  /* ── MOBILE RESPONSIVE ── */
-  @media (max-width: 768px) {
-    /* Topbar */
-    .topbar { padding: 0 10px; gap: 8px; }
-    .logo-text { font-size: 13px; }
-    .ai-badge { display: none; }
-    .status-label { display: none; }
-    .sep { display: none; }
-    .btn { padding: 5px 8px; font-size: 11px; }
+  /* MONACO EDITOR */
+  #monaco-container { flex:1; overflow:hidden; position:relative; }
+  .editor-loading { display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-family:var(--mono);font-size:12px;gap:8px; }
 
-    /* Hide nav pills on mobile, use bottom nav instead */
-    .nav-pills { display: none !important; }
+  /* AUTOCOMPLETE DROPDOWN */
+  .autocomplete-box { position:absolute;z-index:150;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;min-width:220px;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+  .ac-item { padding:6px 10px;font-family:var(--mono);font-size:11px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px; }
+  .ac-item:hover,.ac-item.selected { background:var(--bg4);color:var(--text); }
+  .ac-kind { font-size:9px;background:var(--bg3);padding:1px 4px;border-radius:3px;color:var(--text3);flex-shrink:0; }
 
-    /* Full-width single column layout */
-    .app-layout {
-      display: flex;
-      flex-direction: column;
-      height: calc(100vh - 52px);
-      overflow: hidden;
-    }
+  /* CUSTOM COMMANDS */
+  .custom-cmd-row { display:flex;gap:6px;margin-bottom:6px;align-items:center; }
+  .custom-cmd-input { flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none; }
+  .custom-cmd-input:focus { border-color:var(--accent); }
+  .custom-cmd-del { background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer;font-size:11px;flex-shrink:0; }
 
-    /* Sidebar becomes a collapsible top strip */
-    .sidebar {
-      display: none;
-      position: fixed;
-      top: 52px;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 200;
-      overflow-y: auto;
-    }
-    .sidebar.mobile-open { display: flex; }
+  /* DASHBOARD */
+  .dashboard-card { background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--border); }
+  .dashboard-card h4 { font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px; }
+  .file-row { display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer; }
+  .file-row:last-child { border-bottom:none; }
+  .file-row:hover { color:var(--accent2); }
+  .file-row-name { flex:1;font-family:var(--mono);font-size:11px;color:var(--text2); }
+  .file-row-date { font-size:10px;color:var(--text3); }
+  .share-box { background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:10px;color:var(--accent2);word-break:break-all;margin-top:6px;cursor:pointer; }
 
-    /* Editor takes full screen */
-    .editor-area { flex: 1; overflow: hidden; }
+  /* URDU VOICE BADGE */
+  .lang-badge { display:inline-block;background:rgba(124,109,250,0.15);color:var(--accent2);font-size:9px;padding:2px 6px;border-radius:4px;margin-left:4px; }
 
-    /* Right panel becomes bottom sheet */
-    .right-panel {
-      display: none;
-      position: fixed;
-      bottom: 52px;
-      left: 0;
-      right: 0;
-      height: 55vh;
-      z-index: 200;
-      border-top: 2px solid var(--border2);
-      border-radius: 16px 16px 0 0;
-    }
-    .right-panel.mobile-open { display: flex; }
-
-    /* Output pane smaller */
-    .output-pane { height: 130px; }
-
-    /* Editor toolbar wraps */
-    .editor-toolbar { height: auto; flex-wrap: wrap; padding: 6px; gap: 4px; }
-    .tabs-scroll-area { order: 1; width: 100%; }
-    .toolbar-actions { order: 2; width: 100%; justify-content: flex-end; }
-
-    /* Bottom navigation bar */
-    .mobile-nav {
-      display: flex !important;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 52px;
-      background: var(--bg2);
-      border-top: 1px solid var(--border);
-      z-index: 300;
-      align-items: center;
-      justify-content: space-around;
-    }
-    .mobile-nav-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      padding: 6px 12px;
-      cursor: pointer;
-      color: var(--text3);
-      font-size: 9px;
-      font-family: var(--sans);
-      border: none;
-      background: none;
-      transition: color 0.15s;
-    }
-    .mobile-nav-btn.active { color: var(--accent2); }
-    .mobile-nav-btn svg { width: 18px; height: 18px; }
-
-    /* Push content up to make room for bottom nav */
-    #app-page { padding-bottom: 52px; }
-
-    /* Overlay backdrop */
-    .mobile-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 190;
-    }
-    .mobile-overlay.show { display: block; }
-
-    /* Landing page mobile */
-    .landing h1 { font-size: 28px; }
-    .landing p { font-size: 14px; }
-    .feature-grid { grid-template-columns: 1fr; }
-    .landing-btns { flex-direction: column; align-items: center; }
-
-    /* Auth modal */
-    .auth-box { width: 95vw; padding: 20px; }
-
-    /* Command guide cards full width */
-    .cmd-card { margin-bottom: 8px; }
-  }
+  /* GHOST TEXT (AI autocomplete) */
+  .ghost-text { color: var(--text3) !important; font-style: italic; opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -570,6 +486,14 @@
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Save
           </button>
+          <button class="btn btn-ghost btn-sm" onclick="saveFileToCloud()" title="Save to cloud">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            ☁
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="shareCode()" title="Share code link">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
+          </button>
           <button class="btn btn-ghost btn-sm" onclick="loadFileFromPC()">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Load
@@ -587,11 +511,12 @@
       </div>
 
       <div class="editor-wrap">
-        <div class="editor-inner">
-          <div class="line-numbers" id="line-numbers"></div>
-          <textarea id="code-editor" class="code-editor-ta" spellcheck="false" autocomplete="off"
-            onkeydown="handleEditorTab(event)"
-            oninput="updateLineNumbers();markActiveModified()"></textarea>
+        <div class="editor-inner" style="position:relative">
+          <div id="monaco-container">
+            <div class="editor-loading"><div class="compile-spinner"></div> Loading editor...</div>
+          </div>
+          <!-- Hidden textarea as fallback / for tab save -->
+          <textarea id="code-editor" style="display:none" spellcheck="false"></textarea>
         </div>
       </div>
 
@@ -613,6 +538,7 @@
         <div class="panel-tab" onclick="switchPanel('ai',this)">✦ AI Chat</div>
         <div class="panel-tab active" onclick="switchPanel('guide',this)">Commands</div>
         <div class="panel-tab" onclick="switchPanel('snippets',this)">Snippets</div>
+        <div class="panel-tab" onclick="switchPanel('dashboard',this)">Dashboard</div>
         <div class="panel-tab" onclick="switchPanel('settings',this)">Settings</div>
       </div>
       <div class="panel-body" id="panel-body"></div>
@@ -726,30 +652,206 @@
 
 <div class="toast-wrap" id="toast-wrap"></div>
 
-<!-- MOBILE OVERLAY -->
-<div class="mobile-overlay" id="mobile-overlay" onclick="closeMobilePanels()"></div>
-
-<!-- MOBILE BOTTOM NAV -->
-<nav class="mobile-nav" id="mobile-nav" style="display:none">
-  <button class="mobile-nav-btn active" id="mnav-editor" onclick="mobileShowEditor()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-    Editor
-  </button>
-  <button class="mobile-nav-btn" id="mnav-mic" onclick="mobileShowMic()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-    Voice
-  </button>
-  <button class="mobile-nav-btn" id="mnav-ai" onclick="mobileShowAI()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-    AI
-  </button>
-  <button class="mobile-nav-btn" id="mnav-run" onclick="compileCode()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-    Run
-  </button>
-</nav>
-
 <script>
+// Load Monaco Editor
+let monacoEditor = null;
+let monacoReady = false;
+
+function loadMonaco() {
+  return new Promise((resolve) => {
+    if (monacoReady) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js';
+    script.onload = () => {
+      require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
+      require(['vs/editor/editor.main'], () => {
+        monacoReady = true;
+        resolve();
+      });
+    };
+    document.head.appendChild(script);
+  });
+}
+
+async function initMonacoEditor(code) {
+  await loadMonaco();
+  const container = document.getElementById('monaco-container');
+  if (!container) return;
+  container.innerHTML = ''; // clear loading msg
+
+  // Set Monaco theme matching our dark/light mode
+  monaco.editor.defineTheme('voicecoder-dark', {
+    base: 'vs-dark', inherit: true,
+    rules: [
+      { token: 'comment', foreground: '5a5870', fontStyle: 'italic' },
+      { token: 'keyword', foreground: 'a78bfa' },
+      { token: 'string', foreground: '22d3a0' },
+      { token: 'number', foreground: 'fbbf24' },
+    ],
+    colors: {
+      'editor.background': '#0a0a0f',
+      'editor.foreground': '#f0eeff',
+      'editorLineNumber.foreground': '#5a5870',
+      'editor.lineHighlightBackground': '#18181f',
+      'editorCursor.foreground': '#7c6dfa',
+      'editor.selectionBackground': '#7c6dfa33',
+    }
+  });
+  monaco.editor.defineTheme('voicecoder-light', {
+    base: 'vs', inherit: true,
+    rules: [],
+    colors: { 'editor.background': '#f5f5fa', 'editor.foreground': '#1a1830' }
+  });
+
+  monacoEditor = monaco.editor.create(container, {
+    value: code || '',
+    language: 'cpp',
+    theme: isDark ? 'voicecoder-dark' : 'voicecoder-light',
+    fontSize: 13,
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    fontLigatures: true,
+    lineHeight: 1.6,
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    wordWrap: 'off',
+    suggest: { showSnippets: true, showKeywords: true },
+    quickSuggestions: { other: true, comments: false, strings: false },
+    suggestOnTriggerCharacters: true,
+    acceptSuggestionOnEnter: 'on',
+    tabSize: 4,
+    insertSpaces: true,
+    renderWhitespace: 'none',
+    smoothScrolling: true,
+    cursorBlinking: 'smooth',
+    cursorSmoothCaretAnimation: 'on',
+  });
+
+  // AI Copilot-style autocomplete on Ctrl+Space
+  monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
+    triggerAiAutocomplete();
+  });
+
+  // Track changes -> mark tab modified
+  monacoEditor.onDidChangeModelContent(() => {
+    markActiveModified();
+    syncEditorToTab();
+    scheduleAiAutocomplete();
+  });
+
+  // Sync hidden textarea for save/load compatibility
+  monacoEditor.onDidChangeModelContent(() => {
+    const ta = document.getElementById('code-editor');
+    if (ta) ta.value = monacoEditor.getValue();
+  });
+}
+
+function syncEditorToTab() {
+  const tab = getActiveTab();
+  if (tab && monacoEditor) tab.code = monacoEditor.getValue();
+}
+
+function getEditorCode() {
+  return monacoEditor ? monacoEditor.getValue() : (document.getElementById('code-editor')?.value || '');
+}
+
+function setEditorCode(code) {
+  if (monacoEditor) {
+    monacoEditor.setValue(code || '');
+  } else {
+    const ta = document.getElementById('code-editor');
+    if (ta) ta.value = code || '';
+  }
+}
+
+// AI AUTOCOMPLETE (Copilot-style)
+let autocompleteTimer = null;
+let lastAutocompleteCode = '';
+
+function scheduleAiAutocomplete() {
+  clearTimeout(autocompleteTimer);
+  autocompleteTimer = setTimeout(triggerAiAutocomplete, 1800);
+}
+
+async function triggerAiAutocomplete() {
+  if (!monacoEditor) return;
+  const code = monacoEditor.getValue();
+  if (code === lastAutocompleteCode || code.trim().length < 10) return;
+  lastAutocompleteCode = code;
+  const key = getApiKey();
+  if (!key) return; // silently skip if no key
+
+  const position = monacoEditor.getPosition();
+  const lines = code.split('\n');
+  const currentLine = lines[position.lineNumber - 1] || '';
+  if (!currentLine.trim()) return; // don't suggest on empty lines
+
+  try {
+    const systemP = `You are a C++ code completion engine like GitHub Copilot.
+Given the current code, suggest ONLY the next 1-3 lines of code to complete what the user is typing.
+Return ONLY the raw code completion, no explanation, no backticks, no comments.
+If nothing useful to suggest, return empty string.`;
+    const userP = `Current file:
+${code}
+
+Cursor is at line ${position.lineNumber}. Complete the code:`;
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: 80,
+        messages: [{ role: 'system', content: systemP }, { role: 'user', content: userP }]
+      })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const suggestion = data.choices[0].message.content.trim();
+    if (!suggestion || suggestion.length < 2) return;
+
+    // Show ghost text as inline decoration
+    showInlineSuggestion(suggestion, position);
+  } catch (e) { /* silent fail */ }
+}
+
+let ghostDecoration = [];
+let currentSuggestion = '';
+let currentSuggestionPos = null;
+
+function showInlineSuggestion(text, position) {
+  if (!monacoEditor) return;
+  currentSuggestion = text;
+  currentSuggestionPos = position;
+  ghostDecoration = monacoEditor.deltaDecorations(ghostDecoration, [{
+    range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+    options: {
+      after: { content: text.split('\n')[0], inlineClassName: 'ghost-text' },
+      description: 'ai-suggestion'
+    }
+  }]);
+  // Accept on Tab
+  monacoEditor.addCommand(monaco.KeyCode.Tab, () => {
+    if (currentSuggestion) {
+      acceptInlineSuggestion();
+    } else {
+      monacoEditor.trigger('keyboard', 'tab', {});
+    }
+  });
+}
+
+function acceptInlineSuggestion() {
+  if (!monacoEditor || !currentSuggestion) return;
+  const pos = monacoEditor.getPosition();
+  monacoEditor.executeEdits('ai-complete', [{
+    range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+    text: currentSuggestion
+  }]);
+  ghostDecoration = monacoEditor.deltaDecorations(ghostDecoration, []);
+  currentSuggestion = '';
+  showToast('ai', '✦ AI completed');
+}
+
 // STATE
 let isDark = true;
 let currentUser = null;
@@ -917,10 +1019,9 @@ Return ONLY the corrected, complete C++ code with no explanation, no markdown, n
     const fixed = await callOpenAI(system, user, 1500);
     const clean = fixed.trim().replace(/^```(?:cpp|c\+\+)?\n?/,'').replace(/\n?```$/,'');
     tab.undoStack.push(code);
-    document.getElementById('code-editor').value = clean;
+    setEditorCode(clean);
     tab.code = clean;
     tab.modified = true;
-    updateLineNumbers();
     renderTabs();
     addLog('success', '✓ AI fixed your code');
     showToast('ai', 'AI fixed your code!');
@@ -1001,10 +1102,10 @@ Return ONLY the complete, working C++ code with no explanation and no markdown b
     hideAiThinking();
     const clean = completed.trim().replace(/^```(?:cpp|c\+\+)?\n?/,'').replace(/\n?```$/,'');
     tab.undoStack.push(code);
-    document.getElementById('code-editor').value = clean;
+    setEditorCode(clean);
     tab.code = clean;
     tab.modified = true;
-    updateLineNumbers(); renderTabs();
+    renderTabs();
     addAiMessage('assistant', 'Done! I completed your code. Check the editor.');
     showToast('ai', 'Code completed by AI!');
   } catch(e) {
@@ -1126,9 +1227,10 @@ function switchPanel(panel, el) {
 
 function renderPanel(panel) {
   const body = document.getElementById('panel-body');
-  if (panel==='ai')       body.innerHTML = renderAiPanel();
+  if (panel==='ai')         body.innerHTML = renderAiPanel();
   else if (panel==='guide')    body.innerHTML = renderGuidePanel();
   else if (panel==='snippets') body.innerHTML = renderSnippetsPanel();
+  else if (panel==='dashboard') { body.innerHTML = renderDashboardPanel(); loadDashboardFiles(); }
   else if (panel==='settings') body.innerHTML = renderSettingsPanel();
 
   if (panel==='ai') {
@@ -1203,6 +1305,76 @@ const GROUPS = [
   ]},
   { name:'Code Snippets (Rule-based)', items: COMMANDS.filter(c=>c.code) },
 ];
+
+function renderDashboardPanel(){
+  return `<div>
+    <div class="dashboard-card">
+      <h4>👤 Account</h4>
+      ${currentUser ? `
+        <div style="font-size:12px;color:var(--text2)">Signed in as <b>${currentUser.name}</b></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${currentUser.email}</div>
+      ` : `<div style="font-size:12px;color:var(--text3)">Not signed in. <a style="color:var(--accent2);cursor:pointer" onclick="openAuthModal('signin')">Sign in</a> to use cloud features.</div>`}
+    </div>
+    <div class="dashboard-card">
+      <h4>☁ Cloud Files</h4>
+      <div id="cloud-files-list"><div style="color:var(--text3);font-size:11px">Loading...</div></div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px" onclick="saveFileToCloud()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        Save Current File to Cloud
+      </button>
+    </div>
+    <div class="dashboard-card">
+      <h4>🔗 Share Code</h4>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Generate a shareable link for your current code</div>
+      <button class="btn btn-accent btn-sm" style="width:100%" onclick="shareAndShowLink()">Generate Share Link</button>
+      <div id="share-link-box" style="display:none"></div>
+    </div>
+    <div class="dashboard-card">
+      <h4>📊 Session Stats</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">
+        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--accent2)">${commandHistory.length}</div>
+          <div style="color:var(--text3)">Commands</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--green)">${outputCount}</div>
+          <div style="color:var(--text3)">Compiles</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--ai)">${aiChatHistory.length}</div>
+          <div style="color:var(--text3)">AI Messages</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--amber)">${tabs.length}</div>
+          <div style="color:var(--text3)">Open Tabs</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadDashboardFiles(){
+  const el = document.getElementById('cloud-files-list');
+  if(!el) return;
+  if(!currentUser){ el.innerHTML='<div style="color:var(--text3);font-size:11px">Sign in to see cloud files</div>'; return; }
+  const files = await loadCloudFiles();
+  if(!files.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px">No cloud files yet</div>'; return; }
+  el.innerHTML = files.map(f=>`
+    <div class="file-row" onclick="openCloudFile('${f.id}','${f.filename}',${JSON.stringify(f.code)})">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      <span class="file-row-name">${f.filename}</span>
+      <span class="file-row-date">${new Date(f.updated_at).toLocaleDateString()}</span>
+    </div>`).join('');
+}
+
+async function shareAndShowLink(){
+  const url = await shareCode();
+  const box = document.getElementById('share-link-box');
+  if(url && box){
+    box.style.display='block';
+    box.innerHTML=`<div class="share-box" onclick="navigator.clipboard.writeText('${url}');showToast('success','Copied!')">${url}<br><span style="font-size:9px;color:var(--text3)">Click to copy</span></div>`;
+  }
+}
 
 function renderGuidePanel() {
   return GROUPS.map(g=>`
@@ -1280,11 +1452,28 @@ function renderSettingsPanel() {
     <div class="setting-row">
       <div class="setting-label">Backend</div>
       <select class="sel" onchange="selectedApi=this.value">
+        <option value="judge0" ${selectedApi==='judge0'?'selected':''}>⚡ Judge0 (Real C++)</option>
         <option value="simulate" ${selectedApi==='simulate'?'selected':''}>Simulator</option>
         <option value="paiza" ${selectedApi==='paiza'?'selected':''}>Paiza.io</option>
         <option value="jdoodle" ${selectedApi==='jdoodle'?'selected':''}>JDoodle</option>
       </select>
     </div>
+    <div class="ai-key-notice" style="margin-top:6px">⚡ Judge0 works free via our server proxy. For higher limits, add a <a onclick="window.open('https://rapidapi.com/judge0-official/api/judge0-ce')">RapidAPI key →</a></div>
+    <input class="api-key-input" id="rapid-api-key" type="password" placeholder="RapidAPI key (optional)">
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">🗣 Urdu Voice</div>
+    <div class="setting-row">
+      <div><div class="setting-label">Urdu responses <span class="lang-badge">اردو</span></div><div class="setting-sub">TTS replies in Urdu</div></div>
+      <button class="toggle ${urduMode?'on':''}" onclick="urduMode=!urduMode;this.className='toggle '+(urduMode?'on':'');speakSmart(urduMode?'اردو موڈ چالو':'Urdu mode off')"></button>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">🎙 Custom Commands</div>
+    <div id="custom-cmd-list">${customCommands.map((c,i)=>`
+      <div class="custom-cmd-row">
+        <input class="custom-cmd-input" value="${c.trigger}" placeholder="trigger phrase" onchange="customCommands[${i}].trigger=this.value.toLowerCase();saveCustomCommands()">
+        <input class="custom-cmd-input" value="${c.code.replace(/"/g,'&quot;')}" placeholder="code to insert" onchange="customCommands[${i}].code=this.value;saveCustomCommands()">
+        <button class="custom-cmd-del" onclick="deleteCustomCommand(${i});renderPanel('settings')">✕</button>
+      </div>`).join('')}
+    </div>
+    <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="addCustomCommand();renderPanel('settings')">+ Add Command</button>
     <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">Editor</div>
     <div class="setting-row">
       <div><div class="setting-label">Echo commands</div><div class="setting-sub">Show in logs</div></div>
@@ -1309,6 +1498,8 @@ function renderSettingsPanel() {
 
 // VOICE COMMAND PROCESSING
 function processVoiceCommand(raw, confidence) {
+  // Check custom commands first
+  if(checkCustomCommands(raw)){ addCmdToHistory(raw,true,confidence,false); speakSmart('Done'); return; }
   if (aiMode) {
     // Check for simple AI routing commands first
     const lower = raw.toLowerCase().trim();
@@ -1369,12 +1560,12 @@ function processFallbackCommand(raw, confidence) {
       insertCode(matched.code);
       addCmdToHistory(raw, true, confidence, false);
       if (echoCommands) addLog('info', `> ${raw}`);
-      speak('Done', false);
+      speakSmart('Done');
     } else {
       addCmdToHistory(raw, false, confidence, false);
       addLog('warn', `Unknown: "${raw}"`);
       showToast('error', 'Command not recognized — try AI mode');
-      speak('Command not recognized', false);
+      speakSmart('Command not recognized');
     }
     setStatus(isListening ? 'listening' : 'idle');
     document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Say a command...</span>';
@@ -1612,7 +1803,7 @@ function stopListening() {
   document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Say a command...</span>';
   document.getElementById('transcript-badge').style.display = 'none';
   drawIdleWaveform();
-  speak('Microphone off', false);
+  speakSmart('Microphone off');
 }
 
 function setRecognitionLang(lang) {
@@ -1730,14 +1921,15 @@ function renderTabs(){
 function switchToTab(id){saveActiveEditorState();activeTabId=id;loadTabIntoEditor(id);renderTabs();}
 function saveActiveEditorState(){
   const tab=getActiveTab(); if(!tab) return;
+  if(monacoEditor) { tab.code=monacoEditor.getValue(); return; }
   const ed=document.getElementById('code-editor'); if(!ed) return;
-  tab.code=ed.value; tab.scrollTop=ed.scrollTop; tab.cursorStart=ed.selectionStart; tab.cursorEnd=ed.selectionEnd;
+  tab.code=ed.value;
 }
 function loadTabIntoEditor(id){
   const tab=tabs.find(t=>t.id===id); if(!tab) return;
+  if(monacoEditor) { monacoEditor.setValue(tab.code||''); return; }
   const ed=document.getElementById('code-editor'); if(!ed) return;
-  ed.value=tab.code;
-  requestAnimationFrame(()=>{ ed.scrollTop=tab.scrollTop||0; try{ed.setSelectionRange(tab.cursorStart||0,tab.cursorEnd||0);}catch(e){} updateLineNumbers(); });
+  ed.value=tab.code||'';
 }
 function addNewTab(name,code){
   saveActiveEditorState();
@@ -1758,14 +1950,14 @@ function navigateTab(dir){
   switchToTab(tabs[(idx+dir+tabs.length)%tabs.length].id);
 }
 function clearActiveTab(){
-  const tab=getActiveTab(); tab.undoStack.push(tab.code);
-  document.getElementById('code-editor').value=''; tab.code=''; tab.modified=true;
-  updateLineNumbers(); renderTabs(); showToast('info','Editor cleared');
+  const tab=getActiveTab(); tab.undoStack.push(getEditorCode());
+  setEditorCode(''); tab.code=''; tab.modified=true;
+  renderTabs(); showToast('info','Editor cleared');
 }
 function markActiveModified(){const t=getActiveTab();if(t){t.modified=true;renderTabs();}}
 function undoLast(){
   const tab=getActiveTab();
-  if(tab&&tab.undoStack.length){document.getElementById('code-editor').value=tab.undoStack.pop();tab.code=document.getElementById('code-editor').value;updateLineNumbers();showToast('info','Undo');}
+  if(tab&&tab.undoStack.length){const prev=tab.undoStack.pop();setEditorCode(prev);tab.code=prev;showToast('info','Undo');}
   else showToast('error','Nothing to undo');
 }
 function duplicateTab(id){
@@ -1821,12 +2013,7 @@ function handleFileLoad(e){
 }
 
 // Line numbers
-function updateLineNumbers(){
-  const ed=document.getElementById('code-editor'),ln=document.getElementById('line-numbers'); if(!ed||!ln) return;
-  const lines=ed.value.split('\n').length;
-  ln.innerHTML=Array.from({length:lines},(_,i)=>`<div style="padding:0 12px 0 0;line-height:1.6">${i+1}</div>`).join('');
-  ln.scrollTop=ed.scrollTop;
-}
+function updateLineNumbers(){ /* Monaco handles line numbers */ }
 
 // Editor tab key
 function handleEditorTab(e){
@@ -1838,18 +2025,20 @@ function handleEditorTab(e){
 // Insert code
 function insertCode(snippet){
   const tab=getActiveTab();
-  tab.undoStack.push(document.getElementById('code-editor').value);
-  const ed=document.getElementById('code-editor'); const val=ed.value;
-  const ins=val.lastIndexOf('\n    return 0;');
-  if(ins!==-1&&snippet.trim()!=='return 0;') ed.value=val.substring(0,ins)+'\n    '+snippet.trimEnd()+val.substring(ins);
-  else ed.value=val+snippet;
-  tab.code=ed.value; tab.modified=true;
-  updateLineNumbers(); renderTabs(); showToast('success','Code inserted');
+  const currentCode = getEditorCode();
+  tab.undoStack.push(currentCode);
+  const ins=currentCode.lastIndexOf('\n    return 0;');
+  let newCode;
+  if(ins!==-1&&snippet.trim()!=='return 0;') newCode=currentCode.substring(0,ins)+'\n    '+snippet.trimEnd()+currentCode.substring(ins);
+  else newCode=currentCode+snippet;
+  setEditorCode(newCode);
+  tab.code=newCode; tab.modified=true;
+  renderTabs(); showToast('success','Code inserted');
   if(autoCompile) setTimeout(()=>compileCode(),500);
 }
 function copyCode(){
   saveActiveEditorState();
-  navigator.clipboard.writeText(getActiveTab().code).then(()=>showToast('success','Code copied')).catch(()=>showToast('error','Could not copy'));
+  navigator.clipboard.writeText(getEditorCode()).then(()=>showToast('success','Code copied')).catch(()=>showToast('error','Could not copy'));
 }
 
 // Text command
@@ -1879,7 +2068,7 @@ function renderCmdHistory(){
 // COMPILE
 async function compileCode(){
   saveActiveEditorState();
-  const tab=getActiveTab(); const code=tab.code;
+  const tab=getActiveTab(); const code=getEditorCode();
   const btn=document.getElementById('compile-btn');
   btn.innerHTML='<div class="compile-spinner"></div> Compiling...'; btn.disabled=true;
   setStatus('processing'); addLog('info',`Compiling ${tab.name}...`);
@@ -1887,7 +2076,8 @@ async function compileCode(){
   lastErrors=[];
   try{
     let result;
-    if(selectedApi==='jdoodle') result=await jdoodleCompile(code);
+    if(selectedApi==='judge0') result=await judge0Compile(code);
+    else if(selectedApi==='jdoodle') result=await jdoodleCompile(code);
     else if(selectedApi==='paiza') result=await paizaCompile(code);
     else result=await simulateCompile(code);
     outputCount++; document.getElementById('output-badge').textContent=outputCount;
@@ -1900,10 +2090,40 @@ async function compileCode(){
       addLog('error','✗ Compilation failed'); result.errors.forEach(e=>{addLog('error',e);lastErrors.push(e);});
       showToast('error','Compilation error — click AI Fix to auto-repair');
       switchOutputTab('errors',document.querySelectorAll('.output-tab')[1]);
+      setTimeout(()=>aiExplainErrors(result.errors), 500);
     }
   }catch(e){addLog('error','Compiler error: '+e.message);showToast('error','Compiler unreachable');}
   btn.innerHTML='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run';
   btn.disabled=false; setStatus(isListening?'listening':'idle');
+}
+
+// ── JUDGE0 (real C++ compiler, no CORS) ──
+async function judge0Compile(code){
+  // Uses the free public Judge0 CE instance
+  const JUDGE0 = 'https://judge0-ce.p.rapidapi.com';
+  const rapidKey = (document.getElementById('rapid-api-key')||{}).value || localStorage.getItem('vc_rapid_key') || '';
+
+  if(!rapidKey){
+    // Fallback: use our Railway proxy
+    const res = await fetch(`${API_BASE}/compile/judge0`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code})
+    });
+    if(!res.ok) throw new Error('Judge0 proxy '+res.status);
+    return await res.json();
+  }
+
+  // Direct call with RapidAPI key
+  const sub = await fetch(`${JUDGE0}/submissions?base64_encoded=false&wait=true`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-RapidAPI-Key':rapidKey,'X-RapidAPI-Host':'judge0-ce.p.rapidapi.com'},
+    body: JSON.stringify({ source_code:code, language_id:54, stdin:'' }) // 54 = C++ 17
+  });
+  if(!sub.ok) throw new Error('Judge0 HTTP '+sub.status);
+  const d = await sub.json();
+  if(d.compile_output) return{success:false,errors:[d.compile_output]};
+  if(d.stderr) return{success:false,errors:[d.stderr]};
+  return{success:true, output: d.stdout||'(no output)'};
 }
 
 async function simulateCompile(code){
@@ -1918,25 +2138,180 @@ async function simulateCompile(code){
 }
 
 async function jdoodleCompile(code){
-  const cid=(document.getElementById('jd-client')||{}).value||'';
-  const sec=(document.getElementById('jd-secret')||{}).value||'';
-  if(!cid||!sec) throw new Error('JDoodle credentials missing');
-  const res=await fetch('https://api.jdoodle.com/v1/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:cid,clientSecret:sec,script:code,language:'cpp17',versionIndex:'0'})});
-  if(!res.ok) throw new Error('JDoodle '+res.status);
+  const res=await fetch(`${API_BASE}/compile/jdoodle`,{
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code})
+  });
+  if(!res.ok) throw new Error('JDoodle proxy '+res.status);
   const d=await res.json();
-  if(d.error) return{success:false,errors:[d.error]};
-  return d.output?.toLowerCase().includes('error:')?{success:false,errors:[d.output]}:{success:true,output:d.output||''};
+  if(!d.success) return{success:false,errors:[d.error||'Compilation failed']};
+  return{success:true,output:d.output||''};
 }
 
 async function paizaCompile(code){
-  const cr=await fetch('https://api.paiza.io/runners/create?source_code='+encodeURIComponent(code)+'&language=cpp&api_key=guest',{method:'POST'});
-  if(!cr.ok) throw new Error('Paiza '+cr.status);
-  const id=(await cr.json()).id;
-  await new Promise(r=>setTimeout(r,2500));
-  const gr=await fetch('https://api.paiza.io/runners/get_details?id='+id+'&api_key=guest');
-  if(!gr.ok) throw new Error('Paiza '+gr.status);
-  const d=await gr.json();
-  return d.build_result==='failure'?{success:false,errors:[d.build_stderr||'Build failed']}:{success:true,output:d.stdout||'(no output)'};
+  const res=await fetch(`${API_BASE}/compile/paiza`,{
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code})
+  });
+  if(!res.ok) throw new Error('Paiza proxy '+res.status);
+  const d=await res.json();
+  if(!d.success) return{success:false,errors:[d.error||'Compilation failed']};
+  return{success:true,output:d.output||''};
+}
+
+// ── AI ERROR EXPLANATION ──
+async function aiExplainErrors(errors){
+  const key = getApiKey();
+  if(!key || !errors.length) return;
+  const code = getEditorCode();
+  addLog('info','🤖 AI explaining errors...');
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+      body: JSON.stringify({
+        model:'gpt-4o-mini', max_tokens:200,
+        messages:[
+          {role:'system',content:'You are a C++ tutor. Explain compiler errors in simple plain English in 2-3 sentences. Be concise and friendly.'},
+          {role:'user',content:`Errors:\n${errors.join('\n')}\n\nCode:\n${code.substring(0,800)}`}
+        ]
+      })
+    });
+    if(!res.ok) return;
+    const d = await res.json();
+    const explanation = d.choices[0].message.content;
+    addLog('info', '💡 ' + explanation);
+    showToast('ai', '💡 AI explained the error');
+  } catch(e){ /* silent */ }
+}
+
+// ── CLOUD SAVE ──
+async function saveFileToCloud(){
+  if(!currentUser){ showToast('warn','Sign in to save to cloud'); return; }
+  const tab = getActiveTab();
+  const code = getEditorCode();
+  const token = authGetToken();
+  try {
+    const res = await fetch(`${API_BASE}/files/save`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body: JSON.stringify({ filename: tab.name, code })
+    });
+    if(!res.ok) throw new Error('Save failed');
+    showToast('success','☁ Saved to cloud!');
+    tab.modified = false; renderTabs();
+  } catch(e){ showToast('error','Cloud save failed: '+e.message); }
+}
+
+async function loadCloudFiles(){
+  if(!currentUser){ showToast('warn','Sign in to load cloud files'); return; }
+  const token = authGetToken();
+  try {
+    const res = await fetch(`${API_BASE}/files/list`, { headers:{'Authorization':`Bearer ${token}`} });
+    if(!res.ok) throw new Error('Load failed');
+    const { files } = await res.json();
+    return files || [];
+  } catch(e){ showToast('error','Could not load files: '+e.message); return []; }
+}
+
+async function openCloudFile(fileId, filename, code){
+  addNewTab(filename, code);
+  showToast('success',`☁ Loaded ${filename}`);
+}
+
+// ── SHARE CODE ──
+async function shareCode(){
+  const code = getEditorCode();
+  const tab = getActiveTab();
+  const token = authGetToken();
+  try {
+    const res = await fetch(`${API_BASE}/files/share`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json', ...(token?{'Authorization':`Bearer ${token}`}:{})},
+      body: JSON.stringify({ filename: tab.name, code })
+    });
+    if(!res.ok) throw new Error('Share failed');
+    const { url } = await res.json();
+    navigator.clipboard.writeText(url).catch(()=>{});
+    showToast('success','🔗 Share link copied!');
+    return url;
+  } catch(e){ showToast('error','Share failed: '+e.message); return null; }
+}
+
+// ── CUSTOM VOICE COMMANDS ──
+let customCommands = JSON.parse(localStorage.getItem('vc_custom_cmds') || '[]');
+
+function saveCustomCommands(){
+  localStorage.setItem('vc_custom_cmds', JSON.stringify(customCommands));
+}
+
+function addCustomCommand(trigger='', code=''){
+  customCommands.push({ trigger: trigger.toLowerCase(), code });
+  saveCustomCommands();
+}
+
+function deleteCustomCommand(idx){
+  customCommands.splice(idx,1);
+  saveCustomCommands();
+}
+
+function checkCustomCommands(input){
+  for(const cmd of customCommands){
+    if(cmd.trigger && input.toLowerCase().includes(cmd.trigger)){
+      insertCode(cmd.code);
+      return true;
+    }
+  }
+  return false;
+}
+
+// ── URDU TTS ──
+let urduMode = false;
+
+function speakUrdu(text){
+  if(!ttsEnabled || !ttsSupported) return;
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'ur-PK';
+  utt.rate = 0.95;
+  const voices = window.speechSynthesis.getVoices();
+  const urduVoice = voices.find(v => v.lang.startsWith('ur'));
+  if(urduVoice) utt.voice = urduVoice;
+  window.speechSynthesis.speak(utt);
+}
+
+function speakSmart(text, urgentMsg=false){
+  if(urduMode){
+    const urduMap = {
+      'Listening':'سن رہا ہوں', 'Done':'ہو گیا', 'Code inserted':'کوڈ لکھ دیا',
+      'Compiled successfully':'کامیابی سے چل گیا', 'Microphone off':'مائیکروفون بند',
+      'Command not recognized':'حکم سمجھ نہ آیا', 'Signed in':'لاگ ان ہو گئے',
+    };
+    const urdu = urduMap[text] || text;
+    speakUrdu(urdu);
+  } else {
+    speak(text, urgentMsg);
+  }
+}
+
+// ── AI CHAT HISTORY (Supabase) ──
+async function saveAiChatHistory(){
+  if(!currentUser) return;
+  const token = authGetToken();
+  try {
+    await fetch(`${API_BASE}/chat/save`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body: JSON.stringify({ history: aiChatHistory.slice(-50) })
+    });
+  } catch(e){ /* silent */ }
+}
+
+async function loadAiChatHistory(){
+  if(!currentUser) return;
+  const token = authGetToken();
+  try {
+    const res = await fetch(`${API_BASE}/chat/history`, { headers:{'Authorization':`Bearer ${token}`} });
+    if(!res.ok) return;
+    const { history } = await res.json();
+    if(history?.length) aiChatHistory = history;
+  } catch(e){ /* silent */ }
 }
 
 // OUTPUT
@@ -1998,7 +2373,13 @@ function showEditor(){
   document.getElementById('landing-page').style.display='none';
   document.getElementById('app-page').style.display='block';
   document.getElementById('nav-pills').style.display='flex';
-  requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); });
+  requestAnimationFrame(async ()=>{
+    drawIdleWaveform(); renderTabs(); renderPanel(currentPanel);
+    if(!monacoReady){
+      await initMonacoEditor(getActiveTab()?.code || DEFAULT_CODE);
+      selectedApi = 'judge0'; // default to real compiler
+    }
+  });
 }
 function guardedShowEditor(){
   if(currentUser) showEditor();
@@ -2169,6 +2550,7 @@ async function tryRestoreSession(){
 }
 
 function applyLoggedIn(){
+  setTimeout(()=>loadAiChatHistory(), 500);
   var a=document.getElementById('auth-area');
   var u=document.getElementById('user-area');
   var lb=document.getElementById('landing-signup-btn');
@@ -2187,9 +2569,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Restore session from SQL Server via JWT
   tryRestoreSession();
 
-  // Init mobile nav
-  initMobileNav();
-
   // Check speech support
   if(!speechSupported){showBanner('warn','⚠ Speech recognition not supported. Use Chrome/Edge.');document.getElementById('perm-btn').classList.add('show');}
   else{navigator.permissions?.query({name:'microphone'}).then(p=>{micPermission=p.state;if(p.state==='denied'){showBanner('error','🚫 Mic denied. Allow in browser settings.');document.getElementById('perm-btn').classList.add('show');}});}
@@ -2197,66 +2576,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Init tabs
   activeTabId=tabs[0].id;
 });
-
-// ── MOBILE NAVIGATION ──
-const isMobile = () => window.innerWidth <= 768;
-
-function initMobileNav() {
-  const nav = document.getElementById('mobile-nav');
-  if (!nav) return;
-  if (isMobile()) {
-    nav.style.display = 'flex';
-  } else {
-    nav.style.display = 'none';
-    closeMobilePanels();
-  }
-}
-
-function closeMobilePanels() {
-  document.querySelector('.sidebar')?.classList.remove('mobile-open');
-  document.querySelector('.right-panel')?.classList.remove('mobile-open');
-  document.getElementById('mobile-overlay')?.classList.remove('show');
-  // Reset nav buttons
-  document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('mnav-editor')?.classList.add('active');
-}
-
-function mobileShowEditor() {
-  closeMobilePanels();
-  document.getElementById('mnav-editor')?.classList.add('active');
-}
-
-function mobileShowMic() {
-  const sidebar = document.querySelector('.sidebar');
-  const overlay = document.getElementById('mobile-overlay');
-  const isOpen = sidebar?.classList.contains('mobile-open');
-  closeMobilePanels();
-  if (!isOpen) {
-    sidebar?.classList.add('mobile-open');
-    overlay?.classList.add('show');
-    document.getElementById('mnav-mic')?.classList.add('active');
-  }
-}
-
-function mobileShowAI() {
-  const panel = document.querySelector('.right-panel');
-  const overlay = document.getElementById('mobile-overlay');
-  const isOpen = panel?.classList.contains('mobile-open');
-  closeMobilePanels();
-  if (!isOpen) {
-    panel?.classList.add('mobile-open');
-    overlay?.classList.add('show');
-    document.getElementById('mnav-ai')?.classList.add('active');
-    renderPanel(currentPanel);
-  }
-}
-
-window.addEventListener('resize', initMobileNav);
-// Init after DOM ready (appended to DOMContentLoaded below)
-
-// Init mobile nav after show editor
-const _origShowEditor = showEditor;
-showEditor = function() { _origShowEditor(); initMobileNav(); };
 </script>
 </body>
 </html>
