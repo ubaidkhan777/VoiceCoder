@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VoiceCoder — AI-Powered C++ IDE</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>var require = { paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
 <style>
   :root {
     --bg: #0a0a0f; --bg2: #111118; --bg3: #18181f; --bg4: #1e1e28;
@@ -297,6 +299,41 @@
   /* AI KEY NOTICE */
   .ai-key-notice{background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--ai);line-height:1.5}
   .ai-key-notice a{color:var(--ai2);cursor:pointer;text-decoration:underline}
+
+  /* MONACO EDITOR WRAPPER */
+  #monaco-editor-container{flex:1;overflow:hidden;position:relative;min-height:0}
+  .monaco-loading{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:13px;font-family:var(--mono);gap:8px}
+
+  /* AI AUTOCOMPLETE GHOST */
+  .autocomplete-ghost{position:absolute;pointer-events:none;opacity:0.42;font-family:'JetBrains Mono',monospace;font-size:13px;white-space:pre;z-index:10;color:var(--accent3);background:transparent;padding:0;border:none;line-height:1.6}
+  .autocomplete-hint{position:absolute;bottom:4px;right:8px;font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 6px;opacity:0;transition:opacity 0.2s;pointer-events:none}
+  .autocomplete-hint.show{opacity:1}
+
+  /* CLOUD SAVE BUTTON */
+  .btn-cloud{background:linear-gradient(135deg,#0ea5e9,#38bdf8);border:1px solid transparent;color:white}
+  .btn-cloud:hover{opacity:0.9;transform:scale(1.02)}
+
+  /* URDU TTS INDICATOR */
+  .urdu-badge{background:linear-gradient(135deg,#16a34a,#22c55e);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;font-family:var(--mono)}
+
+  /* CUSTOM COMMANDS */
+  .custom-cmd-row{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+  .custom-cmd-row input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none}
+  .custom-cmd-row input:focus{border-color:var(--accent)}
+
+  /* ERROR EXPLANATION */
+  .error-explain-box{background:rgba(244,114,182,0.06);border:1px solid rgba(244,114,182,0.25);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:11px;color:var(--text2);line-height:1.6}
+  .error-explain-box strong{color:var(--ai)}
+
+  /* DASHBOARD CARDS */
+  .dashboard-card{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid var(--border)}
+  .dashboard-card h4{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px}
+  .file-row{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;cursor:pointer;background:var(--bg2);margin-bottom:4px;transition:background 0.15s}
+  .file-row:hover{background:var(--bg4)}
+  .file-row-name{font-family:var(--mono);font-size:11px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .file-row-date{font-size:10px;color:var(--text3);flex-shrink:0;margin-left:8px}
+  .share-box{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:8px;font-family:var(--mono);font-size:10px;color:var(--accent3);cursor:pointer;margin-top:8px;word-break:break-all;transition:background 0.15s}
+  .share-box:hover{background:var(--bg4)}
 </style>
 </head>
 <body>
@@ -478,6 +515,9 @@
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             AI Fix
           </button>
+          <button class="btn btn-cloud btn-sm" onclick="saveFileToCloud()" title="Save to Supabase Cloud">
+            ☁ Cloud
+          </button>
           <button class="btn btn-green btn-sm" onclick="compileCode()" id="compile-btn">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Run
@@ -487,12 +527,15 @@
       </div>
 
       <div class="editor-wrap">
-        <div class="editor-inner">
-          <div class="line-numbers" id="line-numbers"></div>
-          <textarea id="code-editor" class="code-editor-ta" spellcheck="false" autocomplete="off"
-            onkeydown="handleEditorTab(event)"
-            oninput="updateLineNumbers();markActiveModified()"></textarea>
+        <div id="monaco-editor-container" style="flex:1;height:100%;min-height:0">
+          <div class="monaco-loading" id="monaco-loading">
+            <div class="compile-spinner"></div> Loading Monaco Editor...
+          </div>
         </div>
+        <!-- Hidden textarea for fallback/compatibility -->
+        <textarea id="code-editor" class="code-editor-ta" spellcheck="false" autocomplete="off" style="display:none"
+          onkeydown="handleEditorTab(event)"
+          oninput="updateLineNumbers();markActiveModified()"></textarea>
       </div>
 
       <div class="output-pane">
@@ -1080,33 +1123,6 @@ const GROUPS = [
   { name:'Code Snippets (Rule-based)', items: COMMANDS.filter(c=>c.code) },
 ];
 
-function renderDashboardPanel(){
-  return `<div>
-    <div class="dashboard-card">
-      <h4>👤 Account</h4>
-      ${currentUser ? `<div style="font-size:12px;color:var(--text2)">Signed in as <b>${currentUser.name}</b></div><div style="font-size:11px;color:var(--text3);margin-top:2px">${currentUser.email}</div>` : `<div style="font-size:12px;color:var(--text3)">Not signed in. <a style="color:var(--accent2);cursor:pointer" onclick="openAuthModal('signin')">Sign in</a></div>`}
-    </div>
-    <div class="dashboard-card">
-      <h4>☁ Cloud Files</h4>
-      <div id="cloud-files-list"><div style="color:var(--text3);font-size:11px">Loading...</div></div>
-      <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px" onclick="saveFileToCloud()">☁ Save Current File</button>
-    </div>
-    <div class="dashboard-card">
-      <h4>🔗 Share Code</h4>
-      <button class="btn btn-accent btn-sm" style="width:100%" onclick="shareAndShowLink()">Generate Share Link</button>
-      <div id="share-link-box" style="display:none"></div>
-    </div>
-    <div class="dashboard-card">
-      <h4>📊 Session Stats</h4>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">
-        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--accent2)">${commandHistory.length}</div><div style="color:var(--text3)">Commands</div></div>
-        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${outputCount}</div><div style="color:var(--text3)">Compiles</div></div>
-        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--ai)">${aiChatHistory.length}</div><div style="color:var(--text3)">AI Chats</div></div>
-        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--amber)">${tabs.length}</div><div style="color:var(--text3)">Tabs</div></div>
-      </div>
-    </div>
-  </div>`;
-}
 
 async function loadDashboardFiles(){
   const el = document.getElementById('cloud-files-list');
@@ -1114,7 +1130,12 @@ async function loadDashboardFiles(){
   if(!currentUser){ el.innerHTML='<div style="color:var(--text3);font-size:11px">Sign in to see cloud files</div>'; return; }
   const files = await loadCloudFiles();
   if(!files || !files.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px">No cloud files yet</div>'; return; }
-  el.innerHTML = files.map(f=>`<div class="file-row" onclick="openCloudFile('${f.id}','${escHtml(f.filename)}',${JSON.stringify(f.code)})"><span class="file-row-name">${escHtml(f.filename)}</span><span class="file-row-date">${new Date(f.updated_at).toLocaleDateString()}</span></div>`).join('');
+  el.innerHTML = files.map(f=>`
+    <div class="file-row">
+      <span class="file-row-name" onclick="openCloudFile('${f.id}','${escHtml(f.filename)}',${JSON.stringify(f.code)})" title="Click to open">${escHtml(f.filename)}</span>
+      <span class="file-row-date">${new Date(f.updated_at).toLocaleDateString()}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:4px;color:var(--red)" onclick="deleteCloudFile(${f.id})" title="Delete">✕</button>
+    </div>`).join('');
 }
 
 async function shareAndShowLink(){
@@ -1153,106 +1174,7 @@ function renderSnippetsPanel() {
     </div>`).join('');
 }
 
-function renderSettingsPanel() {
-  return `<div>
-    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">AI</div>
-    <div class="ai-key-notice">Paste your OpenAI API key to enable AI features.<br><a onclick="window.open('https://platform.openai.com/api-keys')">Get a key →</a></div>
-    <input class="api-key-input" id="openai-api-key" type="password" placeholder="sk-..." oninput="localStorage.setItem('vc_openai_apikey',this.value.trim())">
-    <div class="setting-row" style="margin-top:8px">
-      <div><div class="setting-label">AI mode</div><div class="setting-sub">Use GPT-4o for voice</div></div>
-      <button class="toggle ${aiMode?'on':''}" onclick="aiMode=!aiMode;this.className='toggle '+(aiMode?'on':'');showToast('info','AI mode '+(aiMode?'on':'off'))"></button>
-    </div>
-    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">🎙 Voice Input</div>
-    <div class="setting-row">
-      <div><div class="setting-label">Language</div><div class="setting-sub">Recognition locale</div></div>
-      <select class="sel" onchange="setRecognitionLang(this.value)">
-        <option value="en-US" ${recognitionLang==='en-US'?'selected':''}>English (US)</option>
-        <option value="en-GB" ${recognitionLang==='en-GB'?'selected':''}>English (UK)</option>
-        <option value="en-AU" ${recognitionLang==='en-AU'?'selected':''}>English (AU)</option>
-        <option value="ur-PK" ${recognitionLang==='ur-PK'?'selected':''}>Urdu (PK)</option>
-        <option value="ar" ${recognitionLang==='ar'?'selected':''}>Arabic</option>
-      </select>
-    </div>
-    <div class="setting-row">
-      <div><div class="setting-label">Push-to-Talk</div><div class="setting-sub">Hold <kbd style="font-family:var(--mono);background:var(--bg4);padding:1px 4px;border-radius:3px;font-size:9px">Space</kbd> to speak</div></div>
-      <button class="toggle ${pushToTalk?'on':''}" onclick="pushToTalk=!pushToTalk;this.className='toggle '+(pushToTalk?'on':'');if(isListening)document.getElementById('mic-state').textContent=pushToTalk?'Hold Space to speak':'Listening...';showToast('info','Push-to-Talk '+(pushToTalk?'on':'off'))"></button>
-    </div>
-    <div class="setting-row">
-      <div><div class="setting-label">Noise Gate</div><div class="setting-sub">Filter background noise</div></div>
-      <select class="sel" onchange="noiseGateLevel=parseFloat(this.value);showToast('info','Noise gate: '+this.options[this.selectedIndex].text)">
-        <option value="0" ${noiseGateLevel===0?'selected':''}>Off</option>
-        <option value="0.01" ${noiseGateLevel===0.01?'selected':''}>Low</option>
-        <option value="0.02" ${noiseGateLevel===0.02?'selected':''}>Medium</option>
-        <option value="0.05" ${noiseGateLevel===0.05?'selected':''}>High</option>
-      </select>
-    </div>
-    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">🔊 Voice Feedback (TTS)</div>
-    <div class="setting-row">
-      <div><div class="setting-label">Speak confirmations</div><div class="setting-sub">Audible command feedback</div></div>
-      <button class="toggle ${ttsEnabled?'on':''}" onclick="ttsEnabled=!ttsEnabled;this.className='toggle '+(ttsEnabled?'on':'');if(ttsEnabled)speak('Voice feedback enabled');else window.speechSynthesis.cancel()"></button>
-    </div>
-    <div class="setting-row" style="${ttsSupported?'':'opacity:0.4;pointer-events:none'}">
-      <div><div class="setting-label">TTS status</div><div class="setting-sub">${ttsSupported?'Available in this browser':'Not supported'}</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="speak('Voice feedback test. Hello from VoiceCoder!',true)">Test</button>
-    </div>
-    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">Compiler</div>
-    <div class="setting-row">
-      <div class="setting-label">Backend</div>
-      <select class="sel" onchange="selectedApi=this.value">
-        <option value="simulate" ${selectedApi==='simulate'?'selected':''}>Simulator</option>
-        <option value="paiza" ${selectedApi==='paiza'?'selected':''}>Paiza.io</option>
-        <option value="jdoodle" ${selectedApi==='jdoodle'?'selected':''}>JDoodle</option>
-      </select>
-    </div>
-    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">Editor</div>
-    <div class="setting-row">
-      <div><div class="setting-label">Echo commands</div><div class="setting-sub">Show in logs</div></div>
-      <button class="toggle ${echoCommands?'on':''}" onclick="echoCommands=!echoCommands;this.className='toggle '+(echoCommands?'on':'')"></button>
-    </div>
-    <div class="setting-row">
-      <div><div class="setting-label">Auto-compile</div><div class="setting-sub">Run after insert</div></div>
-      <button class="toggle ${autoCompile?'on':''}" onclick="autoCompile=!autoCompile;this.className='toggle '+(autoCompile?'on':'')"></button>
-    </div>
-    <div class="setting-row">
-      <div class="setting-label">Theme</div>
-      <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" id="theme-btn2">${isDark?'☀ Light':'☾ Dark'}</button>
-    </div>
-    <div style="font-size:10px;color:var(--text3);margin-top:14px;font-family:var(--mono);line-height:1.8;background:var(--bg3);border-radius:6px;padding:8px 10px">
-      ⌨ <b>Ctrl+M</b> — toggle mic<br>
-      ⌨ <b>Space</b> (hold) — push-to-talk<br>
-      🗣 Say punctuation: "period", "comma", "open brace"…<br>
-      🔁 Recognition auto-restarts with backoff
-    </div>
-  </div>`;
-}
 
-// VOICE COMMAND PROCESSING
-function processVoiceCommand(raw, confidence) {
-  if (aiMode) {
-    // Check for simple AI routing commands first
-    const lower = raw.toLowerCase().trim();
-    const aiTriggers = {
-      explain: ['explain','explain code','explain this','what does this do'],
-      review:  ['review','review code','review my code','code review'],
-      fix:     ['fix','fix error','fix errors','fix the error','fix my code'],
-      complete:['complete','complete code','complete my code','finish my code','auto complete'],
-    };
-    for (const [action, triggers] of Object.entries(aiTriggers)) {
-      if (triggers.some(t => lower.includes(t))) {
-        if (action==='explain') aiExplainCode();
-        else if (action==='review')  aiReviewCode();
-        else if (action==='fix')     aiFixErrors();
-        else if (action==='complete')aiCompleteCode();
-        addCmdToHistory(raw, true, confidence, true);
-        return;
-      }
-    }
-    // Everything else goes to AI
-    aiProcessVoiceCommand(raw, confidence);
-    return;
-  }
-  processFallbackCommand(raw, confidence);
-}
 
 function processFallbackCommand(raw, confidence) {
   const input = raw.toLowerCase().trim().replace(/name space/g,'namespace').replace(/i o stream/g,'iostream').replace(/c out/g,'cout').replace(/c in/g,'cin');
@@ -1647,17 +1569,6 @@ function renderTabs(){
   if(ae) ae.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
 }
 function switchToTab(id){saveActiveEditorState();activeTabId=id;loadTabIntoEditor(id);renderTabs();}
-function saveActiveEditorState(){
-  const tab=getActiveTab(); if(!tab) return;
-  const ed=document.getElementById('code-editor'); if(!ed) return;
-  tab.code=ed.value; tab.scrollTop=ed.scrollTop; tab.cursorStart=ed.selectionStart; tab.cursorEnd=ed.selectionEnd;
-}
-function loadTabIntoEditor(id){
-  const tab=tabs.find(t=>t.id===id); if(!tab) return;
-  const ed=document.getElementById('code-editor'); if(!ed) return;
-  ed.value=tab.code;
-  requestAnimationFrame(()=>{ ed.scrollTop=tab.scrollTop||0; try{ed.setSelectionRange(tab.cursorStart||0,tab.cursorEnd||0);}catch(e){} updateLineNumbers(); });
-}
 function addNewTab(name,code){
   saveActiveEditorState();
   const nid=tabIdCounter++; const nm=name||`file${nid}.cpp`;
@@ -1754,23 +1665,6 @@ function handleEditorTab(e){
   if(e.ctrlKey&&e.key==='t'){e.preventDefault();addNewTab();}
 }
 
-// Insert code
-function insertCode(snippet){
-  const tab=getActiveTab();
-  tab.undoStack.push(document.getElementById('code-editor').value);
-  const ed=document.getElementById('code-editor'); const val=ed.value;
-  const ins=val.lastIndexOf('\n    return 0;');
-  if(ins!==-1&&snippet.trim()!=='return 0;') ed.value=val.substring(0,ins)+'\n    '+snippet.trimEnd()+val.substring(ins);
-  else ed.value=val+snippet;
-  tab.code=ed.value; tab.modified=true;
-  updateLineNumbers(); renderTabs(); showToast('success','Code inserted');
-  if(autoCompile) setTimeout(()=>compileCode(),500);
-}
-function copyCode(){
-  saveActiveEditorState();
-  navigator.clipboard.writeText(getActiveTab().code).then(()=>showToast('success','Code copied')).catch(()=>showToast('error','Could not copy'));
-}
-
 // Text command
 function handleTextCmd(e){if(e.key==='Enter')executeTextCmd();}
 function executeTextCmd(){const inp=document.getElementById('text-cmd');const v=inp.value.trim();if(!v)return;processVoiceCommand(v,null);inp.value='';}
@@ -1796,34 +1690,6 @@ function renderCmdHistory(){
     </div>`).join('');
 }
 // COMPILE
-async function compileCode(){
-  saveActiveEditorState();
-  const tab=getActiveTab(); const code=tab.code;
-  const btn=document.getElementById('compile-btn');
-  btn.innerHTML='<div class="compile-spinner"></div> Compiling...'; btn.disabled=true;
-  setStatus('processing'); addLog('info',`Compiling ${tab.name}...`);
-  switchOutputTab('output',document.querySelector('.output-tab'));
-  lastErrors=[];
-  try{
-    let result;
-    if(selectedApi==='jdoodle') result=await jdoodleCompile(code);
-    else if(selectedApi==='paiza') result=await paizaCompile(code);
-    else result=await simulateCompile(code);
-    outputCount++; document.getElementById('output-badge').textContent=outputCount;
-    if(result.success){
-      addLog('success',`✓ ${tab.name} compiled`);
-      result.output.split('\n').filter(l=>l).forEach(l=>addLog('success',l));
-      showToast('success','Compiled successfully!'); tab.modified=false; renderTabs();
-    } else {
-      errorCount++; document.getElementById('error-badge').textContent=errorCount;
-      addLog('error','✗ Compilation failed'); result.errors.forEach(e=>{addLog('error',e);lastErrors.push(e);});
-      showToast('error','Compilation error — click AI Fix to auto-repair');
-      switchOutputTab('errors',document.querySelectorAll('.output-tab')[1]);
-    }
-  }catch(e){addLog('error','Compiler error: '+e.message);showToast('error','Compiler unreachable');}
-  btn.innerHTML='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run';
-  btn.disabled=false; setStatus(isListening?'listening':'idle');
-}
 
 async function simulateCompile(code){
   await new Promise(r=>setTimeout(r,900));
@@ -1918,14 +1784,6 @@ function toggleSettingsDrawer() {
       });
     }
   }
-}
-function toggleTheme(){
-  isDark=!isDark;
-  document.body.classList.toggle('light-mode',!isDark);
-  const btn=document.getElementById('theme-btn'),btn2=document.getElementById('theme-btn2');
-  if(btn) btn.textContent=isDark?'☀ Light':'☾ Dark';
-  if(btn2) btn2.textContent=isDark?'☀ Light':'☾ Dark';
-  drawIdleWaveform();
 }
 
 // NAVIGATION
@@ -2109,7 +1967,763 @@ async function tryRestoreSession(){
   }
 }
 
-function applyLoggedIn(){
+
+// ═══════════════════════════════════════════════
+// MONACO EDITOR — VS Code experience
+// ═══════════════════════════════════════════════
+let monacoEditor = null;
+let monacoReady = false;
+let autocompleteTimer = null;
+let autocompleteVisible = false;
+let pendingSuggestion = '';
+
+function initMonaco() {
+  require(['vs/editor/editor.main'], function() {
+    // Register C++ language config (already built-in, just refine)
+    const theme = isDark ? 'vc-dark' : 'vc-light';
+    monaco.editor.defineTheme('vc-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '5a5870', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'a78bfa', fontStyle: 'bold' },
+        { token: 'string', foreground: '22d3a0' },
+        { token: 'number', foreground: 'fbbf24' },
+        { token: 'type', foreground: 'f472b6' },
+      ],
+      colors: {
+        'editor.background': '#0a0a0f',
+        'editor.foreground': '#f0eeff',
+        'editor.lineHighlightBackground': '#18181f',
+        'editorLineNumber.foreground': '#5a5870',
+        'editorLineNumber.activeForeground': '#9d9ab5',
+        'editor.selectionBackground': '#7c6dfa33',
+        'editorCursor.foreground': '#a78bfa',
+        'editor.inactiveSelectionBackground': '#7c6dfa1a',
+        'editorIndentGuide.background': '#1e1e28',
+        'editorWidget.background': '#111118',
+        'editorSuggestWidget.background': '#111118',
+        'editorSuggestWidget.border': '#2a2a38',
+        'editorSuggestWidget.selectedBackground': '#7c6dfa22',
+      }
+    });
+    monaco.editor.defineTheme('vc-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#f5f5fa',
+        'editor.foreground': '#1a1830',
+        'editor.lineHighlightBackground': '#ededf4',
+        'editorLineNumber.foreground': '#9896b0',
+        'editorCursor.foreground': '#5b4de8',
+      }
+    });
+
+    const tab = getActiveTab();
+    monacoEditor = monaco.editor.create(document.getElementById('monaco-editor-container'), {
+      value: tab ? tab.code : DEFAULT_CODE,
+      language: 'cpp',
+      theme: isDark ? 'vc-dark' : 'vc-light',
+      fontSize: 13,
+      fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
+      fontLigatures: true,
+      lineHeight: 22,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      automaticLayout: true,
+      tabSize: 4,
+      insertSpaces: true,
+      wordWrap: 'off',
+      renderLineHighlight: 'line',
+      cursorBlinking: 'smooth',
+      cursorSmoothCaretAnimation: 'on',
+      smoothScrolling: true,
+      padding: { top: 12, bottom: 12 },
+      suggest: { showKeywords: true, showSnippets: true },
+      quickSuggestions: { other: true, comments: false, strings: false },
+      acceptSuggestionOnEnter: 'on',
+      formatOnPaste: true,
+      bracketPairColorization: { enabled: true },
+      'semanticHighlighting.enabled': true,
+    });
+
+    monacoReady = true;
+    document.getElementById('monaco-loading').style.display = 'none';
+
+    // Sync Monaco → tab state
+    monacoEditor.onDidChangeModelContent(() => {
+      const tab = getActiveTab();
+      if (tab) {
+        tab.code = monacoEditor.getValue();
+        tab.modified = true;
+        renderTabs();
+      }
+      // AI Autocomplete trigger
+      clearTimeout(autocompleteTimer);
+      autocompleteTimer = setTimeout(() => triggerAiAutocomplete(), 1800);
+    });
+
+    // Ctrl+S save
+    monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveFileToPC());
+    // Ctrl+T new tab
+    monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyT, () => addNewTab());
+    // Tab accepts autocomplete suggestion
+    monacoEditor.addCommand(monaco.KeyCode.Tab, () => {
+      if (autocompleteVisible && pendingSuggestion) {
+        acceptAiSuggestion();
+      } else {
+        monacoEditor.trigger('keyboard', 'tab', {});
+      }
+    });
+
+    console.log('✅ Monaco Editor loaded');
+  });
+}
+
+// Sync tab code into Monaco
+function syncToMonaco(code) {
+  if (!monacoReady || !monacoEditor) return;
+  const model = monacoEditor.getModel();
+  if (model) {
+    // Use edit to preserve undo history
+    monacoEditor.executeEdits('tab-switch', [{
+      range: model.getFullModelRange(),
+      text: code,
+      forceMoveMarkers: true
+    }]);
+    monacoEditor.setScrollPosition({ scrollTop: 0 });
+  }
+}
+
+function getMonacoCode() {
+  if (monacoReady && monacoEditor) return monacoEditor.getValue();
+  return document.getElementById('code-editor').value;
+}
+
+// Update theme for Monaco when toggled
+function applyMonacoTheme() {
+  if (monacoReady) monaco.editor.setTheme(isDark ? 'vc-dark' : 'vc-light');
+}
+
+// ═══════════════════════════════════════════════
+// AI AUTOCOMPLETE — 1.8s after typing
+// ═══════════════════════════════════════════════
+let autocompleteDecoration = [];
+
+async function triggerAiAutocomplete() {
+  const key = getApiKey();
+  if (!key || !monacoReady) return;
+  const code = monacoEditor.getValue();
+  if (!code.trim() || code.length < 10) return;
+
+  const pos = monacoEditor.getPosition();
+  const lineContent = monacoEditor.getModel().getLineContent(pos.lineNumber);
+  if (!lineContent.trim()) return; // Don't suggest on empty lines
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 80,
+        messages: [{
+          role: 'system',
+          content: 'You are a C++ code autocomplete engine. Complete the code after the cursor position. Return ONLY the completion text (no explanation, no backticks, no preamble). Keep it to 1-3 lines max.'
+        }, {
+          role: 'user',
+          content: `Complete this C++ code (cursor is at end):\n${code}`
+        }]
+      })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const suggestion = (data.choices[0]?.message?.content || '').trim()
+      .replace(/^```(?:cpp|c\+\+)?\n?/, '').replace(/\n?```$/, '');
+    if (!suggestion) return;
+
+    pendingSuggestion = suggestion;
+    autocompleteVisible = true;
+
+    // Show ghost text decoration in Monaco
+    const lineCount = monacoEditor.getModel().getLineCount();
+    const lastCol = monacoEditor.getModel().getLineMaxColumn(pos.lineNumber);
+    autocompleteDecoration = monacoEditor.deltaDecorations(autocompleteDecoration, [{
+      range: new monaco.Range(pos.lineNumber, lastCol, pos.lineNumber, lastCol),
+      options: {
+        after: {
+          content: suggestion.split('\n')[0], // Show first line as inline ghost
+          inlineClassName: 'autocomplete-inline-ghost',
+        },
+        className: '',
+      }
+    }]);
+
+    // Show hint
+    showAutocompleteHint(true);
+  } catch(e) {
+    // Silently fail autocomplete
+  }
+}
+
+function acceptAiSuggestion() {
+  if (!pendingSuggestion || !monacoReady) return;
+  const pos = monacoEditor.getPosition();
+  monacoEditor.executeEdits('ai-autocomplete', [{
+    range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+    text: pendingSuggestion,
+  }]);
+  clearAiSuggestion();
+  showToast('ai', '✦ AI suggestion accepted (Tab)');
+}
+
+function clearAiSuggestion() {
+  pendingSuggestion = '';
+  autocompleteVisible = false;
+  if (monacoReady) autocompleteDecoration = monacoEditor.deltaDecorations(autocompleteDecoration, []);
+  showAutocompleteHint(false);
+}
+
+function showAutocompleteHint(show) {
+  let hint = document.getElementById('autocomplete-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'autocomplete-hint';
+    hint.className = 'autocomplete-hint';
+    hint.textContent = 'Tab ↵ to accept AI suggestion · Esc to dismiss';
+    document.getElementById('monaco-editor-container').appendChild(hint);
+  }
+  hint.classList.toggle('show', show);
+}
+
+// Dismiss on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && autocompleteVisible) {
+    clearAiSuggestion();
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ERROR EXPLANATION — auto after compile fails
+// ═══════════════════════════════════════════════
+async function aiExplainErrors(errors) {
+  const key = getApiKey();
+  if (!key || !errors.length) return;
+  const box = document.getElementById('error-explain-output');
+  if (!box) return;
+  box.innerHTML = '<span style="color:var(--ai)">✦ AI is analyzing errors...</span>';
+  box.style.display = 'block';
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 300,
+        messages: [{
+          role: 'system',
+          content: 'You are a C++ tutor. A student got compiler errors. Explain what went wrong in simple language in 2-3 sentences. Be friendly and specific. No markdown headers.'
+        }, {
+          role: 'user',
+          content: `C++ compiler errors:\n${errors.join('\n')}\n\nExplain what went wrong and how to fix it.`
+        }]
+      })
+    });
+    if (!res.ok) { box.style.display='none'; return; }
+    const data = await res.json();
+    const explanation = data.choices[0]?.message?.content || '';
+    box.innerHTML = `<strong>✦ AI Error Analysis:</strong><br>${explanation.replace(/\n/g,'<br>')}`;
+  } catch(e) { box.style.display='none'; }
+}
+
+// ═══════════════════════════════════════════════
+// URDU TTS — speak in اردو
+// ═══════════════════════════════════════════════
+let urduTtsEnabled = false;
+
+function speakUrdu(text) {
+  if (!ttsSupported) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'ur-PK';
+  utt.rate = 0.95;
+  utt.pitch = 1.0;
+  const voices = window.speechSynthesis.getVoices();
+  const urduVoice = voices.find(v => v.lang === 'ur-PK' || v.lang === 'ur' || v.name.toLowerCase().includes('urdu'));
+  if (urduVoice) utt.voice = urduVoice;
+  window.speechSynthesis.speak(utt);
+}
+
+function speakFeedback(text, isSuccess) {
+  if (urduTtsEnabled) {
+    // Map common responses to Urdu
+    const urduMap = {
+      'Done': 'ہو گیا',
+      'Compiled successfully!': 'کمپائل ہو گیا',
+      'Code inserted': 'کوڈ داخل ہو گیا',
+      'Listening': 'سن رہا ہوں',
+      'Microphone off': 'مائیکروفون بند',
+      'Command not recognized': 'کمانڈ سمجھ نہیں آئی',
+      'AI fixed your code!': 'اے آئی نے کوڈ ٹھیک کر دیا',
+      'Code copied': 'کوڈ کاپی ہو گیا',
+      'Undo': 'واپس ہو گیا',
+    };
+    const urduText = urduMap[text] || text;
+    speakUrdu(urduText);
+  } else {
+    speak(text, false);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// CUSTOM VOICE COMMANDS
+// ═══════════════════════════════════════════════
+let customCommands = JSON.parse(localStorage.getItem('vc_custom_cmds') || '[]');
+// Format: [{trigger: "say hello", code: 'cout << "Hello";'}]
+
+function saveCustomCommands() {
+  localStorage.setItem('vc_custom_cmds', JSON.stringify(customCommands));
+}
+
+function matchCustomCommand(input) {
+  for (const cmd of customCommands) {
+    if (cmd.trigger && input.toLowerCase().includes(cmd.trigger.toLowerCase())) {
+      return cmd;
+    }
+  }
+  return null;
+}
+
+function renderCustomCommandsSettings() {
+  return `
+  <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">🎙 Custom Voice Commands</div>
+  <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Say your trigger phrase → inserts your code snippet.</div>
+  <div id="custom-cmds-list">
+    ${customCommands.map((c,i) => `
+      <div class="custom-cmd-row">
+        <input value="${escHtml(c.trigger)}" placeholder="trigger phrase" onchange="customCommands[${i}].trigger=this.value;saveCustomCommands()">
+        <input value="${escHtml(c.code)}" placeholder="code to insert" onchange="customCommands[${i}].code=this.value;saveCustomCommands()">
+        <button class="btn btn-ghost btn-sm" onclick="customCommands.splice(${i},1);saveCustomCommands();toggleSettingsDrawer();setTimeout(toggleSettingsDrawer,50)">✕</button>
+      </div>`).join('')}
+  </div>
+  <button class="btn btn-accent btn-sm" style="width:100%;margin-top:8px" onclick="customCommands.push({trigger:'',code:''});saveCustomCommands();toggleSettingsDrawer();setTimeout(toggleSettingsDrawer,50)">
+    + Add Command
+  </button>`;
+}
+
+// ═══════════════════════════════════════════════
+// AI CHAT HISTORY — save/restore to Supabase
+// ═══════════════════════════════════════════════
+async function saveChatHistoryToCloud() {
+  if (!currentUser) return;
+  const token = authGetToken();
+  if (!token || !aiChatHistory.length) return;
+  try {
+    await fetch(`${API_BASE}/chat/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ history: aiChatHistory }),
+    });
+  } catch(e) { /* best-effort */ }
+}
+
+async function loadChatHistoryFromCloud() {
+  if (!currentUser) return;
+  const token = authGetToken();
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/chat/history`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.history && data.history.length) {
+      aiChatHistory = data.history;
+      showToast('info', `💬 Restored ${aiChatHistory.length} chat messages`);
+    }
+  } catch(e) { /* best-effort */ }
+}
+
+// Auto-save chat every 30s if user is logged in
+setInterval(() => { if(currentUser && aiChatHistory.length) saveChatHistoryToCloud(); }, 30000);
+
+// ═══════════════════════════════════════════════
+// CLOUD SAVE / LOAD (patched to use Monaco)
+// ═══════════════════════════════════════════════
+async function saveFileToCloud() {
+  if (!currentUser) { showToast('warn', 'Sign in to save to cloud'); openAuthModal('signin'); return; }
+  const tab = getActiveTab();
+  tab.code = getMonacoCode();
+  const token = authGetToken();
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/files/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ filename: tab.name, code: tab.code }),
+    });
+    if (res.ok) { tab.modified = false; renderTabs(); showToast('success', `☁ ${tab.name} saved to cloud`); }
+    else showToast('error', 'Cloud save failed');
+  } catch(e) { showToast('error', 'Cannot reach server'); }
+}
+
+async function loadCloudFiles() {
+  const token = authGetToken();
+  if (!token) return [];
+  try {
+    const res = await fetch(`${API_BASE}/files/list`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.files || [];
+  } catch(e) { return []; }
+}
+
+function openCloudFile(id, filename, code) {
+  addNewTab(filename, code);
+  showToast('success', `☁ Opened ${filename}`);
+}
+
+async function deleteCloudFile(id) {
+  const token = authGetToken();
+  if (!token) return;
+  try {
+    await fetch(`${API_BASE}/files/delete/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    if (currentPanel === 'dashboard') { renderPanel('dashboard'); }
+    showToast('info', 'File deleted');
+  } catch(e) { showToast('error', 'Delete failed'); }
+}
+
+async function shareCode() {
+  const tab = getActiveTab();
+  tab.code = getMonacoCode();
+  const token = authGetToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  try {
+    const res = await fetch(`${API_BASE}/files/share`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ filename: tab.name, code: tab.code }),
+    });
+    if (!res.ok) { showToast('error', 'Share failed'); return null; }
+    const data = await res.json();
+    return data.url;
+  } catch(e) { showToast('error', 'Cannot reach server'); return null; }
+}
+
+// ═══════════════════════════════════════════════
+// PATCH: getActiveTab code uses Monaco
+// ═══════════════════════════════════════════════
+function saveActiveEditorState() {
+  const tab = getActiveTab(); if (!tab) return;
+  tab.code = getMonacoCode();
+  if (monacoReady && monacoEditor) {
+    tab.scrollTop = monacoEditor.getScrollTop();
+    const pos = monacoEditor.getPosition();
+    tab.cursorLine = pos ? pos.lineNumber : 1;
+    tab.cursorCol = pos ? pos.column : 1;
+  }
+}
+
+function loadTabIntoEditor(id) {
+  const tab = tabs.find(t => t.id === id); if (!tab) return;
+  if (monacoReady && monacoEditor) {
+    syncToMonaco(tab.code);
+    if (tab.cursorLine) {
+      monacoEditor.setPosition({ lineNumber: tab.cursorLine, column: tab.cursorCol || 1 });
+    }
+    monacoEditor.focus();
+  } else {
+    const ed = document.getElementById('code-editor');
+    if (ed) { ed.value = tab.code; updateLineNumbers(); }
+  }
+}
+
+// Patch insertCode to use Monaco
+function insertCode(snippet) {
+  const tab = getActiveTab();
+  if (monacoReady && monacoEditor) {
+    tab.undoStack.push(monacoEditor.getValue());
+    const model = monacoEditor.getModel();
+    const pos = monacoEditor.getPosition();
+    // Try to insert before return 0
+    const fullText = monacoEditor.getValue();
+    const returnIdx = fullText.lastIndexOf('\n    return 0;');
+    if (returnIdx !== -1 && snippet.trim() !== 'return 0;') {
+      const newText = fullText.substring(0, returnIdx) + '\n    ' + snippet.trimEnd() + fullText.substring(returnIdx);
+      syncToMonaco(newText);
+    } else {
+      monacoEditor.executeEdits('insert-snippet', [{
+        range: new monaco.Range(model.getLineCount(), model.getLineMaxColumn(model.getLineCount()), model.getLineCount(), model.getLineMaxColumn(model.getLineCount())),
+        text: snippet,
+      }]);
+    }
+    tab.code = monacoEditor.getValue();
+  } else {
+    const ed = document.getElementById('code-editor');
+    const val = ed.value;
+    const ins = val.lastIndexOf('\n    return 0;');
+    if (ins !== -1 && snippet.trim() !== 'return 0;') ed.value = val.substring(0, ins) + '\n    ' + snippet.trimEnd() + val.substring(ins);
+    else ed.value = val + snippet;
+    tab.code = ed.value;
+    updateLineNumbers();
+  }
+  tab.modified = true;
+  renderTabs();
+  showToast('success', 'Code inserted');
+  if (autoCompile) setTimeout(() => compileCode(), 500);
+}
+
+// Patch copyCode
+function copyCode() {
+  saveActiveEditorState();
+  navigator.clipboard.writeText(getMonacoCode()).then(() => showToast('success', 'Code copied')).catch(() => showToast('error', 'Could not copy'));
+}
+
+// Patch toggleTheme to also update Monaco
+const _origToggleTheme = window.toggleTheme;
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('light-mode', !isDark);
+  const btn = document.getElementById('theme-btn'), btn2 = document.getElementById('theme-btn2');
+  if (btn) btn.textContent = isDark ? '☀ Light' : '☾ Dark';
+  if (btn2) btn2.textContent = isDark ? '☀ Light' : '☾ Dark';
+  applyMonacoTheme();
+  drawIdleWaveform();
+}
+
+// ═══════════════════════════════════════════════
+// PATCH: compileCode to show error explanation
+// ═══════════════════════════════════════════════
+async function compileCode() {
+  saveActiveEditorState();
+  const tab = getActiveTab();
+  const code = getMonacoCode();
+  tab.code = code;
+  const btn = document.getElementById('compile-btn');
+  btn.innerHTML = '<div class="compile-spinner"></div> Compiling...'; btn.disabled = true;
+  setStatus('processing'); addLog('info', `Compiling ${tab.name}...`);
+  switchOutputTab('output', document.querySelector('.output-tab'));
+  lastErrors = [];
+  // Hide previous explanation
+  const explainBox = document.getElementById('error-explain-output');
+  if (explainBox) explainBox.style.display = 'none';
+  const compileStart = Date.now();
+  try {
+    let result;
+    if (selectedApi === 'jdoodle') result = await jdoodleCompile(code);
+    else if (selectedApi === 'paiza') result = await paizaCompile(code);
+    else result = await simulateCompile(code);
+    const elapsed = ((Date.now() - compileStart) / 1000).toFixed(2);
+    outputCount++; document.getElementById('output-badge').textContent = outputCount;
+    if (result.success) {
+      addLog('success', `✓ ${tab.name} compiled in ${elapsed}s`);
+      result.output.split('\n').filter(l => l).forEach(l => addLog('success', l));
+      showToast('success', `✓ Compiled in ${elapsed}s`);
+      tab.modified = false; renderTabs();
+      speakFeedback('Compiled successfully!', true);
+      // Clear Monaco error markers
+      if (monacoReady) monaco.editor.setModelMarkers(monacoEditor.getModel(), 'compiler', []);
+    } else {
+      errorCount++; document.getElementById('error-badge').textContent = errorCount;
+      addLog('error', `✗ Compilation failed (${elapsed}s)`);
+      result.errors.forEach(e => { addLog('error', e); lastErrors.push(e); });
+      showToast('error', 'Compilation error — AI Fix available');
+      switchOutputTab('errors', document.querySelectorAll('.output-tab')[1]);
+      // Auto-explain errors
+      setTimeout(() => aiExplainErrors(lastErrors), 300);
+    }
+  } catch(e) { addLog('error', 'Compiler error: ' + e.message); showToast('error', 'Compiler unreachable'); }
+  btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run';
+  btn.disabled = false; setStatus(isListening ? 'listening' : 'idle');
+}
+
+// ═══════════════════════════════════════════════
+// PATCH: renderSettingsPanel — add Urdu TTS & Custom Commands
+// ═══════════════════════════════════════════════
+function renderSettingsPanel() {
+  return `<div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">AI</div>
+    <div class="ai-key-notice">Paste your OpenAI API key to enable AI features.<br><a onclick="window.open('https://platform.openai.com/api-keys')">Get a key →</a></div>
+    <input class="api-key-input" id="openai-api-key" type="password" placeholder="sk-..." oninput="localStorage.setItem('vc_openai_apikey',this.value.trim())">
+    <div class="setting-row" style="margin-top:8px">
+      <div><div class="setting-label">AI mode</div><div class="setting-sub">Use GPT-4o for voice</div></div>
+      <button class="toggle ${aiMode?'on':''}" onclick="aiMode=!aiMode;this.className='toggle '+(aiMode?'on':'');showToast('info','AI mode '+(aiMode?'on':'off'))"></button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">AI Autocomplete</div><div class="setting-sub">1.8s after typing → Tab to accept</div></div>
+      <button class="toggle ${aiAutocompleteEnabled?'on':''}" id="autocomplete-toggle" onclick="aiAutocompleteEnabled=!aiAutocompleteEnabled;this.className='toggle '+(aiAutocompleteEnabled?'on':'');showToast('info','Autocomplete '+(aiAutocompleteEnabled?'on':'off'))"></button>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">🎙 Voice Input</div>
+    <div class="setting-row">
+      <div><div class="setting-label">Language</div><div class="setting-sub">Recognition locale</div></div>
+      <select class="sel" onchange="setRecognitionLang(this.value)">
+        <option value="en-US" ${recognitionLang==='en-US'?'selected':''}>English (US)</option>
+        <option value="en-GB" ${recognitionLang==='en-GB'?'selected':''}>English (UK)</option>
+        <option value="en-AU" ${recognitionLang==='en-AU'?'selected':''}>English (AU)</option>
+        <option value="ur-PK" ${recognitionLang==='ur-PK'?'selected':''}>Urdu (PK)</option>
+        <option value="ar" ${recognitionLang==='ar'?'selected':''}>Arabic</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Push-to-Talk</div><div class="setting-sub">Hold <kbd style="font-family:var(--mono);background:var(--bg4);padding:1px 4px;border-radius:3px;font-size:9px">Space</kbd> to speak</div></div>
+      <button class="toggle ${pushToTalk?'on':''}" onclick="pushToTalk=!pushToTalk;this.className='toggle '+(pushToTalk?'on':'');if(isListening)document.getElementById('mic-state').textContent=pushToTalk?'Hold Space to speak':'Listening...';showToast('info','Push-to-Talk '+(pushToTalk?'on':'off'))"></button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Noise Gate</div><div class="setting-sub">Filter background noise</div></div>
+      <select class="sel" onchange="noiseGateLevel=parseFloat(this.value);showToast('info','Noise gate: '+this.options[this.selectedIndex].text)">
+        <option value="0" ${noiseGateLevel===0?'selected':''}>Off</option>
+        <option value="0.01" ${noiseGateLevel===0.01?'selected':''}>Low</option>
+        <option value="0.02" ${noiseGateLevel===0.02?'selected':''}>Medium</option>
+        <option value="0.05" ${noiseGateLevel===0.05?'selected':''}>High</option>
+      </select>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">🔊 Voice Feedback (TTS)</div>
+    <div class="setting-row">
+      <div><div class="setting-label">Speak confirmations</div><div class="setting-sub">Audible command feedback</div></div>
+      <button class="toggle ${ttsEnabled?'on':''}" onclick="ttsEnabled=!ttsEnabled;this.className='toggle '+(ttsEnabled?'on':'');if(ttsEnabled)speak('Voice feedback enabled');else window.speechSynthesis.cancel()"></button>
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">🗣 Urdu Voice (اردو) <span class="urdu-badge">پاکستان</span></div>
+        <div class="setting-sub">Responses in Urdu TTS</div>
+      </div>
+      <button class="toggle ${urduTtsEnabled?'on':''}" id="urdu-toggle" onclick="urduTtsEnabled=!urduTtsEnabled;this.className='toggle '+(urduTtsEnabled?'on':'');showToast('info',urduTtsEnabled?'اردو آواز فعال':'Urdu voice off');if(urduTtsEnabled)speakUrdu('سلام، وائس کوڈر میں خوش آمدید')"></button>
+    </div>
+    <div class="setting-row" style="${ttsSupported?'':'opacity:0.4;pointer-events:none'}">
+      <div><div class="setting-label">TTS status</div><div class="setting-sub">${ttsSupported?'Available in this browser':'Not supported'}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="speak('Voice feedback test. Hello from VoiceCoder!',true)">Test</button>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">Compiler</div>
+    <div class="setting-row">
+      <div class="setting-label">Backend</div>
+      <select class="sel" onchange="selectedApi=this.value">
+        <option value="simulate" ${selectedApi==='simulate'?'selected':''}>Simulator</option>
+        <option value="paiza" ${selectedApi==='paiza'?'selected':''}>Paiza.io</option>
+        <option value="jdoodle" ${selectedApi==='jdoodle'?'selected':''}>JDoodle</option>
+      </select>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">Editor</div>
+    <div class="setting-row">
+      <div><div class="setting-label">Echo commands</div><div class="setting-sub">Show in logs</div></div>
+      <button class="toggle ${echoCommands?'on':''}" onclick="echoCommands=!echoCommands;this.className='toggle '+(echoCommands?'on':'')"></button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Auto-compile</div><div class="setting-sub">Run after insert</div></div>
+      <button class="toggle ${autoCompile?'on':''}" onclick="autoCompile=!autoCompile;this.className='toggle '+(autoCompile?'on':'')"></button>
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Theme</div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" id="theme-btn2">${isDark?'☀ Light':'☾ Dark'}</button>
+    </div>
+    ${renderCustomCommandsSettings()}
+    <div style="font-size:10px;color:var(--text3);margin-top:14px;font-family:var(--mono);line-height:1.8;background:var(--bg3);border-radius:6px;padding:8px 10px">
+      ⌨ <b>Ctrl+M</b> — toggle mic<br>
+      ⌨ <b>Space</b> (hold) — push-to-talk<br>
+      ⌨ <b>Tab</b> — accept AI autocomplete<br>
+      ⌨ <b>Ctrl+S</b> — save file<br>
+      🗣 Say punctuation: "period", "comma", "open brace"…<br>
+      🔁 Recognition auto-restarts with backoff
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// PATCH: renderDashboardPanel — full upgrade
+// ═══════════════════════════════════════════════
+function renderDashboardPanel() {
+  const lines = getMonacoCode().split('\n').length;
+  return `<div>
+    <div class="dashboard-card">
+      <h4>👤 Account</h4>
+      ${currentUser ? `<div style="font-size:12px;color:var(--text2)">Signed in as <b>${currentUser.name}</b></div><div style="font-size:11px;color:var(--text3);margin-top:2px">${currentUser.email}</div>` : `<div style="font-size:12px;color:var(--text3)">Not signed in. <a style="color:var(--accent2);cursor:pointer" onclick="openAuthModal('signin')">Sign in</a></div>`}
+    </div>
+    <div class="dashboard-card">
+      <h4>☁ Cloud Files</h4>
+      <div id="cloud-files-list"><div style="color:var(--text3);font-size:11px">Loading...</div></div>
+      <button class="btn btn-cloud btn-sm" style="width:100%;margin-top:8px" onclick="saveFileToCloud()">☁ Save Current File</button>
+    </div>
+    <div class="dashboard-card">
+      <h4>🔗 Share Code</h4>
+      <button class="btn btn-accent btn-sm" style="width:100%" onclick="shareAndShowLink()">Generate Share Link</button>
+      <div id="share-link-box" style="display:none"></div>
+    </div>
+    <div class="dashboard-card">
+      <h4>📊 Session Stats</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">
+        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--accent2)">${commandHistory.length}</div><div style="color:var(--text3)">Commands</div></div>
+        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${outputCount}</div><div style="color:var(--text3)">Compiles</div></div>
+        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--ai)">${aiChatHistory.length}</div><div style="color:var(--text3)">AI Chats</div></div>
+        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--amber)">${lines}</div><div style="color:var(--text3)">Lines</div></div>
+      </div>
+    </div>
+    <div class="dashboard-card">
+      <h4>💬 AI Chat History</h4>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">${aiChatHistory.length} messages ${currentUser?'— auto-synced to Supabase':''}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="saveChatHistoryToCloud();showToast('success','Chat saved to cloud')">☁ Save Chat</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="aiChatHistory=[];switchPanel('dashboard',null);showToast('info','Chat cleared')">🗑 Clear</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// PATCH: output pane — add error explain box
+// ═══════════════════════════════════════════════
+function addErrorExplainBox() {
+  const pane = document.querySelector('.output-pane');
+  if (!pane || document.getElementById('error-explain-output')) return;
+  const box = document.createElement('div');
+  box.id = 'error-explain-output';
+  box.className = 'error-explain-box';
+  box.style.display = 'none';
+  box.style.margin = '0 12px 8px';
+  pane.appendChild(box);
+}
+
+// ═══════════════════════════════════════════════
+// PATCH: processVoiceCommand — check custom commands first
+// ═══════════════════════════════════════════════
+const _origProcessVoiceCommand = window.processVoiceCommand;
+function processVoiceCommand(raw, confidence) {
+  // Check custom commands first
+  const customMatch = matchCustomCommand(raw);
+  if (customMatch) {
+    insertCode(customMatch.code);
+    addCmdToHistory(raw, true, confidence, false);
+    speakFeedback('Done', true);
+    return;
+  }
+  if (aiMode) {
+    const lower = raw.toLowerCase().trim();
+    const aiTriggers = {
+      explain: ['explain','explain code','explain this','what does this do'],
+      review:  ['review','review code','review my code','code review'],
+      fix:     ['fix','fix error','fix errors','fix the error','fix my code'],
+      complete:['complete','complete code','complete my code','finish my code','auto complete'],
+    };
+    for (const [action, triggers] of Object.entries(aiTriggers)) {
+      if (triggers.some(t => lower.includes(t))) {
+        if (action==='explain') aiExplainCode();
+        else if (action==='review')  aiReviewCode();
+        else if (action==='fix')     aiFixErrors();
+        else if (action==='complete')aiCompleteCode();
+        addCmdToHistory(raw, true, confidence, true);
+        return;
+      }
+    }
+    aiProcessVoiceCommand(raw, confidence);
+    return;
+  }
+  processFallbackCommand(raw, confidence);
+}
+
+// ═══════════════════════════════════════════════
+// PATCH: applyLoggedIn — load chat history from cloud
+// ═══════════════════════════════════════════════
+const _baseApplyLoggedIn = applyLoggedIn;
+function applyLoggedIn() {
   var a=document.getElementById('auth-area');
   var u=document.getElementById('user-area');
   var lb=document.getElementById('landing-signup-btn');
@@ -2120,20 +2734,37 @@ function applyLoggedIn(){
   var e=document.getElementById('user-email-item');
   if(n) n.textContent=currentUser.name||currentUser.email;
   if(e) e.textContent=currentUser.email;
+  // Load cloud chat history after login
+  setTimeout(() => loadChatHistoryFromCloud(), 800);
+}
+
+// State
+let aiAutocompleteEnabled = true;
+
+// Patch triggerAiAutocomplete to respect toggle
+const _origTriggerAiAutocomplete = triggerAiAutocomplete;
+async function triggerAiAutocomplete() {
+  if (!aiAutocompleteEnabled) return;
+  await _origTriggerAiAutocomplete();
 }
 
 // INIT
-
-document.addEventListener('DOMContentLoaded',()=>{
-  // Restore session from SQL Server via JWT
+document.addEventListener('DOMContentLoaded', () => {
   tryRestoreSession();
+  if (!speechSupported) { showBanner('warn', '⚠ Speech recognition not supported. Use Chrome/Edge.'); document.getElementById('perm-btn').classList.add('show'); }
+  else { navigator.permissions?.query({name:'microphone'}).then(p => { micPermission=p.state; if(p.state==='denied'){showBanner('error','🚫 Mic denied. Allow in browser settings.');document.getElementById('perm-btn').classList.add('show');} }); }
+  activeTabId = tabs[0].id;
 
-  // Check speech support
-  if(!speechSupported){showBanner('warn','⚠ Speech recognition not supported. Use Chrome/Edge.');document.getElementById('perm-btn').classList.add('show');}
-  else{navigator.permissions?.query({name:'microphone'}).then(p=>{micPermission=p.state;if(p.state==='denied'){showBanner('error','🚫 Mic denied. Allow in browser settings.');document.getElementById('perm-btn').classList.add('show');}});}
+  // Init Monaco after page loads
+  setTimeout(() => initMonaco(), 100);
 
-  // Init tabs
-  activeTabId=tabs[0].id;
+  // Add error explain box to output pane
+  setTimeout(() => addErrorExplainBox(), 200);
+
+  // Add inline ghost text CSS for Monaco
+  const style = document.createElement('style');
+  style.textContent = `.autocomplete-inline-ghost { opacity: 0.4; color: var(--accent3); font-style: italic; }`;
+  document.head.appendChild(style);
 });
 </script>
 </body>
