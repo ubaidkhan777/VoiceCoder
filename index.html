@@ -297,6 +297,122 @@
   /* AI KEY NOTICE */
   .ai-key-notice{background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--ai);line-height:1.5}
   .ai-key-notice a{color:var(--ai2);cursor:pointer;text-decoration:underline}
+
+  /* ── MOBILE RESPONSIVE ── */
+  @media (max-width: 768px) {
+    /* Topbar */
+    .topbar { padding: 0 10px; gap: 8px; }
+    .logo-text { font-size: 13px; }
+    .ai-badge { display: none; }
+    .status-label { display: none; }
+    .sep { display: none; }
+    .btn { padding: 5px 8px; font-size: 11px; }
+
+    /* Hide nav pills on mobile, use bottom nav instead */
+    .nav-pills { display: none !important; }
+
+    /* Full-width single column layout */
+    .app-layout {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 52px);
+      overflow: hidden;
+    }
+
+    /* Sidebar becomes a collapsible top strip */
+    .sidebar {
+      display: none;
+      position: fixed;
+      top: 52px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 200;
+      overflow-y: auto;
+    }
+    .sidebar.mobile-open { display: flex; }
+
+    /* Editor takes full screen */
+    .editor-area { flex: 1; overflow: hidden; }
+
+    /* Right panel becomes bottom sheet */
+    .right-panel {
+      display: none;
+      position: fixed;
+      bottom: 52px;
+      left: 0;
+      right: 0;
+      height: 55vh;
+      z-index: 200;
+      border-top: 2px solid var(--border2);
+      border-radius: 16px 16px 0 0;
+    }
+    .right-panel.mobile-open { display: flex; }
+
+    /* Output pane smaller */
+    .output-pane { height: 130px; }
+
+    /* Editor toolbar wraps */
+    .editor-toolbar { height: auto; flex-wrap: wrap; padding: 6px; gap: 4px; }
+    .tabs-scroll-area { order: 1; width: 100%; }
+    .toolbar-actions { order: 2; width: 100%; justify-content: flex-end; }
+
+    /* Bottom navigation bar */
+    .mobile-nav {
+      display: flex !important;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      z-index: 300;
+      align-items: center;
+      justify-content: space-around;
+    }
+    .mobile-nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 12px;
+      cursor: pointer;
+      color: var(--text3);
+      font-size: 9px;
+      font-family: var(--sans);
+      border: none;
+      background: none;
+      transition: color 0.15s;
+    }
+    .mobile-nav-btn.active { color: var(--accent2); }
+    .mobile-nav-btn svg { width: 18px; height: 18px; }
+
+    /* Push content up to make room for bottom nav */
+    #app-page { padding-bottom: 52px; }
+
+    /* Overlay backdrop */
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 190;
+    }
+    .mobile-overlay.show { display: block; }
+
+    /* Landing page mobile */
+    .landing h1 { font-size: 28px; }
+    .landing p { font-size: 14px; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .landing-btns { flex-direction: column; align-items: center; }
+
+    /* Auth modal */
+    .auth-box { width: 95vw; padding: 20px; }
+
+    /* Command guide cards full width */
+    .cmd-card { margin-bottom: 8px; }
+  }
 </style>
 </head>
 <body>
@@ -609,6 +725,29 @@
 </div>
 
 <div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- MOBILE OVERLAY -->
+<div class="mobile-overlay" id="mobile-overlay" onclick="closeMobilePanels()"></div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobile-nav" style="display:none">
+  <button class="mobile-nav-btn active" id="mnav-editor" onclick="mobileShowEditor()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    Editor
+  </button>
+  <button class="mobile-nav-btn" id="mnav-mic" onclick="mobileShowMic()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    Voice
+  </button>
+  <button class="mobile-nav-btn" id="mnav-ai" onclick="mobileShowAI()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+    AI
+  </button>
+  <button class="mobile-nav-btn" id="mnav-run" onclick="compileCode()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Run
+  </button>
+</nav>
 
 <script>
 // STATE
@@ -1779,27 +1918,25 @@ async function simulateCompile(code){
 }
 
 async function jdoodleCompile(code){
-  const res=await fetch(`${API_BASE}/compile/jdoodle`,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({code})
-  });
-  if(!res.ok) throw new Error('JDoodle proxy '+res.status);
+  const cid=(document.getElementById('jd-client')||{}).value||'';
+  const sec=(document.getElementById('jd-secret')||{}).value||'';
+  if(!cid||!sec) throw new Error('JDoodle credentials missing');
+  const res=await fetch('https://api.jdoodle.com/v1/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:cid,clientSecret:sec,script:code,language:'cpp17',versionIndex:'0'})});
+  if(!res.ok) throw new Error('JDoodle '+res.status);
   const d=await res.json();
-  if(!d.success) return{success:false,errors:[d.error||'Compilation failed']};
-  return{success:true,output:d.output||''};
+  if(d.error) return{success:false,errors:[d.error]};
+  return d.output?.toLowerCase().includes('error:')?{success:false,errors:[d.output]}:{success:true,output:d.output||''};
 }
 
 async function paizaCompile(code){
-  const res=await fetch(`${API_BASE}/compile/paiza`,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({code})
-  });
-  if(!res.ok) throw new Error('Paiza proxy '+res.status);
-  const d=await res.json();
-  if(!d.success) return{success:false,errors:[d.error||'Compilation failed']};
-  return{success:true,output:d.output||''};
+  const cr=await fetch('https://api.paiza.io/runners/create?source_code='+encodeURIComponent(code)+'&language=cpp&api_key=guest',{method:'POST'});
+  if(!cr.ok) throw new Error('Paiza '+cr.status);
+  const id=(await cr.json()).id;
+  await new Promise(r=>setTimeout(r,2500));
+  const gr=await fetch('https://api.paiza.io/runners/get_details?id='+id+'&api_key=guest');
+  if(!gr.ok) throw new Error('Paiza '+gr.status);
+  const d=await gr.json();
+  return d.build_result==='failure'?{success:false,errors:[d.build_stderr||'Build failed']}:{success:true,output:d.stdout||'(no output)'};
 }
 
 // OUTPUT
@@ -2050,6 +2187,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Restore session from SQL Server via JWT
   tryRestoreSession();
 
+  // Init mobile nav
+  initMobileNav();
+
   // Check speech support
   if(!speechSupported){showBanner('warn','⚠ Speech recognition not supported. Use Chrome/Edge.');document.getElementById('perm-btn').classList.add('show');}
   else{navigator.permissions?.query({name:'microphone'}).then(p=>{micPermission=p.state;if(p.state==='denied'){showBanner('error','🚫 Mic denied. Allow in browser settings.');document.getElementById('perm-btn').classList.add('show');}});}
@@ -2057,6 +2197,66 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Init tabs
   activeTabId=tabs[0].id;
 });
+
+// ── MOBILE NAVIGATION ──
+const isMobile = () => window.innerWidth <= 768;
+
+function initMobileNav() {
+  const nav = document.getElementById('mobile-nav');
+  if (!nav) return;
+  if (isMobile()) {
+    nav.style.display = 'flex';
+  } else {
+    nav.style.display = 'none';
+    closeMobilePanels();
+  }
+}
+
+function closeMobilePanels() {
+  document.querySelector('.sidebar')?.classList.remove('mobile-open');
+  document.querySelector('.right-panel')?.classList.remove('mobile-open');
+  document.getElementById('mobile-overlay')?.classList.remove('show');
+  // Reset nav buttons
+  document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mnav-editor')?.classList.add('active');
+}
+
+function mobileShowEditor() {
+  closeMobilePanels();
+  document.getElementById('mnav-editor')?.classList.add('active');
+}
+
+function mobileShowMic() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('mobile-overlay');
+  const isOpen = sidebar?.classList.contains('mobile-open');
+  closeMobilePanels();
+  if (!isOpen) {
+    sidebar?.classList.add('mobile-open');
+    overlay?.classList.add('show');
+    document.getElementById('mnav-mic')?.classList.add('active');
+  }
+}
+
+function mobileShowAI() {
+  const panel = document.querySelector('.right-panel');
+  const overlay = document.getElementById('mobile-overlay');
+  const isOpen = panel?.classList.contains('mobile-open');
+  closeMobilePanels();
+  if (!isOpen) {
+    panel?.classList.add('mobile-open');
+    overlay?.classList.add('show');
+    document.getElementById('mnav-ai')?.classList.add('active');
+    renderPanel(currentPanel);
+  }
+}
+
+window.addEventListener('resize', initMobileNav);
+// Init after DOM ready (appended to DOMContentLoaded below)
+
+// Init mobile nav after show editor
+const _origShowEditor = showEditor;
+showEditor = function() { _origShowEditor(); initMobileNav(); };
 </script>
 </body>
 </html>
