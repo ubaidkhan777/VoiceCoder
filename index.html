@@ -639,7 +639,7 @@ let ctxTargetTabId = null;
 let ttsEnabled = true;          // Voice feedback (TTS)
 let pushToTalk = false;         // Hold Space to talk
 let pttActive = false;          // Push-to-talk currently held
-let noiseGateLevel = 0.02;      // Min amplitude to trigger (0–1)
+let noiseGateLevel = 0;         // Min amplitude to trigger (0–1) — default OFF
 let restartAttempts = 0;        // For exponential backoff
 let maxRestartAttempts = 8;
 let restartDelay = 150;         // ms, doubles each time
@@ -1270,18 +1270,19 @@ function speak(text, urgent=false) {
   window.speechSynthesis.speak(utt);
 }
 
-// Noise gate check if current volume is above threshold 
+// Noise gate check if current volume is above threshold
 function isAboveNoiseGate() {
+  if (noiseGateLevel === 0) return true; // gate is off, always let through
   if (!analyser) return true; // can't measure, let through
   const buf = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteTimeDomainData(buf);
-  let sum = 0;
-  for (let i = 0; i < buf.length; i++) sum += Math.abs(buf[i] - 128);
-  const level = sum / buf.length / 128;
-  volumeHistory.push(level);
-  if (volumeHistory.length > 10) volumeHistory.shift();
-  const avg = volumeHistory.reduce((a,b)=>a+b,0) / volumeHistory.length;
-  return avg > noiseGateLevel;
+  // Use PEAK level (not average) so a single loud syllable passes through
+  let peak = 0;
+  for (let i = 0; i < buf.length; i++) {
+    const v = Math.abs(buf[i] - 128) / 128;
+    if (v > peak) peak = v;
+  }
+  return peak > noiseGateLevel;
 }
 
 //Recognition factory
