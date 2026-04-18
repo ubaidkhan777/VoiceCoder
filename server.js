@@ -211,6 +211,20 @@ app.get('/files/list', authMiddleware, async (req, res) => {
   }
 });
 
+// ── DELETE FILE ──
+app.delete('/files/delete/:id', authMiddleware, async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM public.user_files WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('File delete error:', err);
+    res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
 // ── SHARE CODE ──
 app.post('/files/share', async (req, res) => {
   const { filename, code } = req.body;
@@ -221,7 +235,7 @@ app.post('/files/share', async (req, res) => {
       'INSERT INTO public.shared_files (share_id, filename, code, created_at) VALUES ($1, $2, $3, NOW())',
       [id, filename || 'snippet.cpp', code]
     );
-    const url = `${process.env.FRONTEND_URL || 'https://voicecoder.netlify.app'}?share=${id}`;
+    const url = `${process.env.FRONTEND_URL || 'https://voicecoder.netlify.app/index.html'}?share=${id}`;
     res.json({ url });
   } catch (err) {
     console.error('Share error:', err);

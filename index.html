@@ -311,9 +311,8 @@
     <span class="ai-badge">AI</span>
   </div>
   <div class="nav-pills" id="nav-pills" style="display:none">
-    <button class="nav-pill active" id="nav-editor" onclick="showEditor()">Editor</button>
-    <button class="nav-pill" id="nav-home" onclick="showLanding()">Home</button>
-    <button class="nav-pill" id="nav-dashboard" onclick="showDashboard()">Dashboard</button>
+    <button class="nav-pill active" onclick="showEditor()">Editor</button>
+    <button class="nav-pill" onclick="showLanding()">Home</button>
   </div>
   <div class="topbar-right">
     <div class="status-dot" id="status-dot"></div>
@@ -475,6 +474,9 @@
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Load
           </button>
+          <button class="btn btn-ghost btn-sm" id="cloud-save-btn" onclick="saveFileToCloud()" title="Save to Cloud">
+            ☁ Cloud
+          </button>
           <button class="btn btn-ai btn-sm" id="ai-fix-btn" onclick="aiFixErrors()" title="AI Fix Errors">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             AI Fix
@@ -514,91 +516,9 @@
         <div class="panel-tab" onclick="switchPanel('ai',this)">✦ AI Chat</div>
         <div class="panel-tab active" onclick="switchPanel('guide',this)">Commands</div>
         <div class="panel-tab" onclick="switchPanel('snippets',this)">Snippets</div>
+        <div class="panel-tab" onclick="switchPanel('dashboard',this)">Dashboard</div>
       </div>
       <div class="panel-body" id="panel-body"></div>
-    </div>
-  </div>
-</div>
-
-
-<!-- DASHBOARD PAGE -->
-<div id="dashboard-page" style="display:none">
-  <div style="max-width:1100px;margin:0 auto;padding:40px 32px">
-    <div style="margin-bottom:32px">
-      <h1 style="font-size:28px;font-weight:800;margin-bottom:6px">Dashboard</h1>
-      <p style="color:var(--text2);font-size:14px">Manage your account, files, and session stats</p>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px">
-      <!-- Account Card -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-          <div style="width:36px;height:36px;background:rgba(124,109,250,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <span style="font-size:15px;font-weight:700">Account</span>
-        </div>
-        <div id="dash-account-info">
-          <div style="font-size:13px;color:var(--text2)">Not signed in</div>
-        </div>
-        <button class="btn btn-ghost" style="width:100%;margin-top:14px;font-size:12px" onclick="doSignOut()" id="dash-signout-btn">Sign Out</button>
-      </div>
-
-      <!-- Session Stats Card -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-          <div style="width:36px;height:36px;background:rgba(34,211,160,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          </div>
-          <span style="font-size:15px;font-weight:700">Session Stats</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
-            <div id="dash-stat-cmds" style="font-size:28px;font-weight:800;color:var(--accent2)">0</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">Commands</div>
-          </div>
-          <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
-            <div id="dash-stat-compiles" style="font-size:28px;font-weight:800;color:var(--green)">0</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">Compiles</div>
-          </div>
-          <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
-            <div id="dash-stat-ai" style="font-size:28px;font-weight:800;color:var(--ai)">0</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">AI Chats</div>
-          </div>
-          <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
-            <div id="dash-stat-tabs" style="font-size:28px;font-weight:800;color:var(--amber)">0</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">Tabs</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Share Code Card -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-          <div style="width:36px;height:36px;background:rgba(244,114,182,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ai)" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          </div>
-          <span style="font-size:15px;font-weight:700">Share Code</span>
-        </div>
-        <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5">Generate a shareable link for your current code file.</p>
-        <button class="btn btn-accent" style="width:100%;font-size:13px" onclick="shareAndShowLink()">Generate Share Link</button>
-        <div id="share-link-box" style="display:none;margin-top:10px"></div>
-      </div>
-    </div>
-
-    <!-- Cloud Files full width -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;background:rgba(251,191,36,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><polyline points="22 12 16 12 13 21 11 3 8 12 2 12"/></svg>
-          </div>
-          <span style="font-size:15px;font-weight:700">Cloud Files</span>
-        </div>
-        <button class="btn btn-ghost" style="font-size:12px" onclick="saveFileToCloud();setTimeout(()=>loadDashboardFilesPage(),800)">☁ Save Current File</button>
-      </div>
-      <div id="cloud-files-list-page" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-        <div style="color:var(--text3);font-size:12px">Loading...</div>
-      </div>
     </div>
   </div>
 </div>
@@ -738,7 +658,7 @@ let ctxTargetTabId = null;
 let ttsEnabled = true;          // Voice feedback (TTS)
 let pushToTalk = false;         // Hold Space to talk
 let pttActive = false;          // Push-to-talk currently held
-let noiseGateLevel = 0.02;      // Min amplitude to trigger (0–1)
+let noiseGateLevel = 0;         // Min amplitude to trigger (0–1) — OFF by default
 let restartAttempts = 0;        // For exponential backoff
 let maxRestartAttempts = 8;
 let restartDelay = 150;         // ms, doubles each time
@@ -2016,43 +1936,13 @@ function toggleTheme(){
 function showLanding(){
   document.getElementById('landing-page').style.display='block';
   document.getElementById('app-page').style.display='none';
-  document.getElementById('dashboard-page').style.display='none';
   document.getElementById('nav-pills').style.display='none';
-  document.querySelectorAll('.nav-pill').forEach(p=>p.classList.remove('active'));
-  document.getElementById('nav-home')?.classList.add('active');
 }
 function showEditor(){
   document.getElementById('landing-page').style.display='none';
   document.getElementById('app-page').style.display='block';
-  document.getElementById('dashboard-page').style.display='none';
   document.getElementById('nav-pills').style.display='flex';
-  document.querySelectorAll('.nav-pill').forEach(p=>p.classList.remove('active'));
-  document.getElementById('nav-editor')?.classList.add('active');
-  requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); });
-}
-function showDashboard(){
-  document.getElementById('landing-page').style.display='none';
-  document.getElementById('app-page').style.display='none';
-  document.getElementById('dashboard-page').style.display='block';
-  document.getElementById('nav-pills').style.display='flex';
-  document.querySelectorAll('.nav-pill').forEach(p=>p.classList.remove('active'));
-  document.getElementById('nav-dashboard')?.classList.add('active');
-  // Populate stats and account info
-  const ai = document.getElementById('dash-account-info');
-  if(ai && currentUser) ai.innerHTML = `<div style="font-size:13px;color:var(--text2)">Signed in as <b>${currentUser.name}</b></div><div style="font-size:12px;color:var(--text3);margin-top:3px">${currentUser.email}</div>`;
-  const sc = document.getElementById('dash-stat-cmds'); if(sc) sc.textContent = commandHistory.length;
-  const sp = document.getElementById('dash-stat-compiles'); if(sp) sp.textContent = outputCount;
-  const sa = document.getElementById('dash-stat-ai'); if(sa) sa.textContent = aiChatHistory.length;
-  const st = document.getElementById('dash-stat-tabs'); if(st) st.textContent = tabs.length;
-  loadDashboardFilesPage();
-}
-async function loadDashboardFilesPage(){
-  const el = document.getElementById('cloud-files-list-page');
-  if(!el) return;
-  if(!currentUser){ el.innerHTML='<div style="color:var(--text3);font-size:12px">Sign in to see cloud files</div>'; return; }
-  const files = await loadCloudFiles();
-  if(!files || !files.length){ el.innerHTML='<div style="color:var(--text3);font-size:12px">No cloud files yet. Save a file to see it here.</div>'; return; }
-  el.innerHTML = files.map(f=>`<div style="background:var(--bg3);border-radius:10px;padding:12px 14px;cursor:pointer;border:1px solid var(--border);transition:border-color 0.15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openCloudFile('${f.id}','${escHtml(f.filename)}',${JSON.stringify(f.code)});showEditor()"><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${escHtml(f.filename)}</div><div style="font-size:11px;color:var(--text3)">${new Date(f.updated_at).toLocaleDateString()}</div></div>`).join('');
+  requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); if(window._pendingSharedCode){addNewTab(window._pendingSharedCode.name,window._pendingSharedCode.code);window._pendingSharedCode=null;} });
 }
 function guardedShowEditor(){
   if(currentUser) showEditor();
@@ -2240,6 +2130,8 @@ function applyLoggedIn(){
 document.addEventListener('DOMContentLoaded',()=>{
   // Restore session from SQL Server via JWT
   tryRestoreSession();
+  // Check for shared code in URL
+  checkShareParam();
 
   // Check speech support
   if(!speechSupported){showBanner('warn','⚠ Speech recognition not supported. Use Chrome/Edge.');document.getElementById('perm-btn').classList.add('show');}
@@ -2248,6 +2140,122 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Init tabs
   activeTabId=tabs[0].id;
 });
+
+// ═══════════════════════════════════════════
+// CLOUD FILE FUNCTIONS
+// ═══════════════════════════════════════════
+
+async function saveFileToCloud() {
+  if (!currentUser) { showToast('warn', 'Sign in to save to cloud'); openAuthModal('signin'); return; }
+  saveActiveEditorState();
+  const tab = getActiveTab();
+  const token = authGetToken();
+  const btn = document.getElementById('cloud-save-btn');
+  if (btn) { btn.textContent = '☁ Saving...'; btn.disabled = true; }
+  try {
+    const res = await fetch(`${API_BASE}/files/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ filename: tab.name, code: tab.code })
+    });
+    if (!res.ok) throw new Error('Save failed: ' + res.status);
+    showToast('success', `☁ "${tab.name}" saved to cloud!`);
+    addLog('success', `☁ Saved "${tab.name}" to cloud`);
+  } catch(e) {
+    showToast('error', 'Cloud save failed: ' + e.message);
+    addLog('error', 'Cloud save error: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '☁ Cloud'; btn.disabled = false; }
+  }
+}
+
+async function loadCloudFiles() {
+  if (!currentUser) return [];
+  const token = authGetToken();
+  try {
+    const res = await fetch(`${API_BASE}/files/list`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.files || [];
+  } catch(e) {
+    addLog('warn', 'Could not load cloud files: ' + e.message);
+    return [];
+  }
+}
+
+function openCloudFile(id, filename, code) {
+  addNewTab(filename, code);
+  showToast('success', `☁ Opened "${filename}" from cloud`);
+}
+
+async function deleteCloudFile(id, filename) {
+  const token = authGetToken();
+  try {
+    const res = await fetch(`${API_BASE}/files/delete/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Delete failed');
+    showToast('success', `Deleted "${filename}" from cloud`);
+    loadDashboardFilesPage(); // refresh list
+  } catch(e) {
+    showToast('error', 'Delete failed: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════
+// SHARE CODE — uses backend to store code, returns short ID link
+// ═══════════════════════════════════════════
+
+async function shareCode() {
+  saveActiveEditorState();
+  const tab = getActiveTab();
+  try {
+    const res = await fetch(`${API_BASE}/files/share`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: tab.name, code: tab.code })
+    });
+    if (!res.ok) throw new Error('Share failed: ' + res.status);
+    const data = await res.json();
+    return data.url || null;
+  } catch(e) {
+    showToast('error', 'Share failed: ' + e.message);
+    return null;
+  }
+}
+
+async function shareAndShowLink() {
+  showToast('info', '⏳ Generating share link...');
+  const url = await shareCode();
+  if (!url) return;
+  try { await navigator.clipboard.writeText(url); showToast('success', '🔗 Share link copied to clipboard!'); }
+  catch(e) { showToast('info', '🔗 Share link ready — click box to copy'); }
+  const boxes = document.querySelectorAll('#share-link-box');
+  boxes.forEach(box => {
+    box.style.display = 'block';
+    box.innerHTML = `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;margin-top:8px;cursor:pointer;word-break:break-all;font-size:10px;font-family:var(--mono);color:var(--accent2);line-height:1.5" onclick="navigator.clipboard.writeText(this.dataset.url);showToast('success','Copied!')" data-url="${url}">${url}<br><span style="font-size:9px;color:var(--text3)">Click to copy</span></div>`;
+  });
+}
+
+// Handle ?share=ID param — loads shared code from backend
+async function checkShareParam() {
+  const params = new URLSearchParams(window.location.search);
+  const shareId = params.get('share');
+  if (!shareId) return;
+  try {
+    const res = await fetch(`${API_BASE}/files/share/${shareId}`);
+    if (!res.ok) { showToast('error', 'Shared file not found'); return; }
+    const data = await res.json();
+    window._pendingSharedCode = { code: data.code, name: data.filename || 'shared.cpp' };
+    showToast('info', `📎 Shared file "${data.filename}" ready — open Editor`);
+  } catch(e) {
+    console.warn('Share load failed:', e);
+  }
+}
+
 </script>
 </body>
 </html>
