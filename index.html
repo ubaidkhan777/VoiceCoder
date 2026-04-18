@@ -2007,7 +2007,7 @@ function showDashboard(){
   document.getElementById('nav-pills').style.display='flex';
   _setActivePill('nav-dashboard');
   const ai=document.getElementById('dash-account-info');
-  if(ai) ai.innerHTML=currentUser?`<b style="color:var(--text)">${currentUser.name}</b><br><span style="font-size:11px;color:var(--text3)">${currentUser.email}</span>`:'<span style="color:var(--text3)">Not signed in. <a style="color:var(--accent2);cursor:pointer" onclick="openAuthModal('signin')">Sign in</a></span>';
+  if(ai) ai.innerHTML=currentUser?('<b>'+currentUser.name+'</b><br><small style="color:var(--text3)">'+currentUser.email+'</small>'):'<span style="color:var(--text3)">Not signed in</span>';
   const sc=document.getElementById('dash-stat-cmds'); if(sc) sc.textContent=commandHistory.length;
   const sp=document.getElementById('dash-stat-compiles'); if(sp) sp.textContent=outputCount;
   const sa=document.getElementById('dash-stat-ai'); if(sa) sa.textContent=aiChatHistory.length;
