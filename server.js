@@ -181,6 +181,60 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
 // Health check
 app.get('/health', (_, res) => res.json({ status: 'ok', ts: new Date() }));
 
+// COMPILE PROXY — avoids CORS issues from the browser
+
+// Paiza.io proxy
+app.post('/compile/paiza', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ success: false, error: 'No code provided' });
+  try {
+    const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+    const cr = await fetch(
+      'https://api.paiza.io/runners/create?source_code=' + encodeURIComponent(code) + '&language=cpp&api_key=guest',
+      { method: 'POST' }
+    );
+    if (!cr.ok) return res.json({ success: false, error: 'Paiza create failed: ' + cr.status });
+    const { id } = await cr.json();
+    await new Promise(r => setTimeout(r, 3000));
+    const gr = await fetch('https://api.paiza.io/runners/get_details?id=' + id + '&api_key=guest');
+    if (!gr.ok) return res.json({ success: false, error: 'Paiza details failed: ' + gr.status });
+    const d = await gr.json();
+    if (d.build_result === 'failure')
+      return res.json({ success: false, error: d.build_stderr || 'Build failed' });
+    return res.json({ success: true, output: d.stdout || '(no output)' });
+  } catch (err) {
+    console.error('Paiza proxy error:', err);
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// JDoodle proxy
+app.post('/compile/jdoodle', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ success: false, error: 'No code provided' });
+  const clientId     = process.env.JDOODLE_CLIENT_ID;
+  const clientSecret = process.env.JDOODLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret)
+    return res.json({ success: false, error: 'JDoodle credentials not configured on server' });
+  try {
+    const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+    const r = await fetch('https://api.jdoodle.com/v1/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, clientSecret, script: code, language: 'cpp17', versionIndex: '0' })
+    });
+    if (!r.ok) return res.json({ success: false, error: 'JDoodle HTTP ' + r.status });
+    const d = await r.json();
+    if (d.error) return res.json({ success: false, error: d.error });
+    if (d.output?.toLowerCase().includes('error:'))
+      return res.json({ success: false, error: d.output });
+    return res.json({ success: true, output: d.output || '' });
+  } catch (err) {
+    console.error('JDoodle proxy error:', err);
+    res.json({ success: false, error: err.message });
+  }
+});
+
 //  START SERVER
 app.listen(PORT, () => {
   console.log(`🚀  VoiceCoder server running on http://localhost:${PORT}`);
