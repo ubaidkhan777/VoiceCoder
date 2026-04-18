@@ -1172,48 +1172,6 @@ const GROUPS = [
   { name:'Code Snippets (Rule-based)', items: COMMANDS.filter(c=>c.code) },
 ];
 
-function renderDashboardPanel(){
-  return `<div>
-    <div class="dashboard-card">
-      <h4>👤 Account</h4>
-      ${currentUser ? `<div style="font-size:12px;color:var(--text2)">Signed in as <b>${currentUser.name}</b></div><div style="font-size:11px;color:var(--text3);margin-top:2px">${currentUser.email}</div>` : `<div style="font-size:12px;color:var(--text3)">Not signed in. <a style="color:var(--accent2);cursor:pointer" onclick="openAuthModal('signin')">Sign in</a></div>`}
-    </div>
-    <div class="dashboard-card">
-      <h4>☁ Cloud Files</h4>
-      <div id="cloud-files-list"><div style="color:var(--text3);font-size:11px">Loading...</div></div>
-      <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px" onclick="saveFileToCloud()">☁ Save Current File</button>
-    </div>
-    <div class="dashboard-card">
-      <h4>🔗 Share Code</h4>
-      <button class="btn btn-accent btn-sm" style="width:100%" onclick="shareAndShowLink()">Generate Share Link</button>
-      <div id="share-link-box" style="display:none"></div>
-    </div>
-    <div class="dashboard-card">
-      <h4>📊 Session Stats</h4>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">
-        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--accent2)">${commandHistory.length}</div><div style="color:var(--text3)">Commands</div></div>
-        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${outputCount}</div><div style="color:var(--text3)">Compiles</div></div>
-        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--ai)">${aiChatHistory.length}</div><div style="color:var(--text3)">AI Chats</div></div>
-        <div style="background:var(--bg2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--amber)">${tabs.length}</div><div style="color:var(--text3)">Tabs</div></div>
-      </div>
-    </div>
-  </div>`;
-}
-
-async function loadDashboardFiles(){
-  const el = document.getElementById('cloud-files-list');
-  if(!el) return;
-  if(!currentUser){ el.innerHTML='<div style="color:var(--text3);font-size:11px">Sign in to see cloud files</div>'; return; }
-  const files = await loadCloudFiles();
-  if(!files || !files.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px">No cloud files yet</div>'; return; }
-  el.innerHTML = files.map(f=>`<div class="file-row" onclick="openCloudFile('${f.id}','${escHtml(f.filename)}',${JSON.stringify(f.code)})"><span class="file-row-name">${escHtml(f.filename)}</span><span class="file-row-date">${new Date(f.updated_at).toLocaleDateString()}</span></div>`).join('');
-}
-
-async function shareAndShowLink(){
-  const url = await shareCode();
-  const box = document.getElementById('share-link-box');
-  if(url && box){ box.style.display='block'; box.innerHTML=`<div class="share-box" onclick="navigator.clipboard.writeText('${url}');showToast('success','Copied!')">${url}<br><span style="font-size:9px;color:var(--text3)">Click to copy</span></div>`; }
-}
 
 function renderGuidePanel() {
   return GROUPS.map(g=>`
