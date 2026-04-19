@@ -443,6 +443,12 @@
     /* ── Push app content above bottom nav ── */
     #app-page { padding-bottom: 56px; }
 
+    /* ── Show topbar mic on mobile, hide status label ── */
+    #topbar-mic-btn { display: flex !important; }
+    .status-dot, .status-label, .sep { display: none !important; }
+    /* Hide Voice tab in bottom nav since topbar button handles it */
+    #mnav-mic { display: none !important; }
+
     /* ── Dark overlay when panel is open ── */
     .mobile-overlay {
       display: none;
@@ -471,6 +477,61 @@
     #monaco-container { width: 100%; height: 100%; }
   }
 
+
+  /* ── Topbar mic button states ── */
+  #topbar-mic-btn.mic-active {
+    background: rgba(34,211,160,0.15) !important;
+    border-color: var(--green) !important;
+    color: var(--green) !important;
+    box-shadow: 0 0 10px rgba(34,211,160,0.25);
+    animation: mic-pulse 1.5s infinite;
+  }
+  @keyframes mic-pulse {
+    0%,100% { box-shadow: 0 0 6px rgba(34,211,160,0.2); }
+    50%      { box-shadow: 0 0 14px rgba(34,211,160,0.45); }
+  }
+
+  /* ── Floating mic HUD ── */
+  #mic-hud {
+    display: none;
+    position: fixed;
+    top: 58px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 8px 14px;
+    z-index: 500;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    min-width: 200px;
+    max-width: 90vw;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  #mic-hud.show { display: flex; }
+  #mic-hud-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    flex-shrink: 0;
+    animation: pulse-dot 1s infinite;
+  }
+  #mic-hud-text {
+    color: var(--text2);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #mic-hud-close {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; padding: 2px; font-size: 14px;
+    line-height: 1; flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
 </style>
 </head>
 <body>
@@ -489,6 +550,17 @@
     <button class="nav-pill" onclick="showLanding()">Home</button>
   </div>
   <div class="topbar-right">
+    <!-- Topbar mic button (shown on mobile) -->
+    <button id="topbar-mic-btn" onclick="toggleMic()" title="Toggle microphone (Ctrl+M)"
+      style="display:none;align-items:center;gap:6px;padding:5px 11px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
+      <svg id="topbar-mic-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+      <span id="topbar-mic-label">Mic</span>
+    </button>
     <div class="status-dot" id="status-dot"></div>
     <span class="status-label" id="status-label">idle</span>
     <div class="sep"></div>
@@ -806,6 +878,13 @@
 
 <div class="toast-wrap" id="toast-wrap"></div>
 
+<!-- FLOATING MIC HUD -->
+<div id="mic-hud">
+  <div id="mic-hud-dot"></div>
+  <span id="mic-hud-text">Listening...</span>
+  <button id="mic-hud-close" onclick="stopListening()" title="Stop mic">✕</button>
+</div>
+
 <!-- MOBILE OVERLAY -->
 <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobilePanels()"></div>
 
@@ -815,10 +894,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
     Editor
   </button>
-  <button class="mobile-nav-btn" id="mnav-mic" onclick="mobileShowMic()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-    Voice
-  </button>
+  <!-- Voice tab removed: mic is now in topbar -->
   <button class="mobile-nav-btn" id="mnav-ai" onclick="mobileShowAI()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     AI
@@ -1430,7 +1506,7 @@ function buildRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return null;
   const r = new SR();
-  r.continuous = !isMobileDevice;
+  r.continuous = true; // always continuous for reliable command detection
   r.interimResults = true;
   r.lang = recognitionLang;
   r.maxAlternatives = 3;
@@ -1497,6 +1573,9 @@ function attachRecognitionHandlers(r) {
       } else if (finalText) {
         transcriptEl.textContent = finalText;
       }
+      // Update floating HUD text
+      const hudText = document.getElementById('mic-hud-text');
+      if (hudText) hudText.textContent = (finalText || interim || 'Listening...').slice(0, 60);
       document.getElementById('transcript-badge').style.display = finalText ? 'none' : 'inline-block';
     }
 
@@ -1520,6 +1599,8 @@ function attachRecognitionHandlers(r) {
         document.getElementById('transcript-badge').style.display = 'none';
         updateConfidence(0);
         interimTranscriptBuffer = '';
+        const hudText = document.getElementById('mic-hud-text');
+        if (hudText) hudText.textContent = 'Listening...';
       }
     }, 2500);
   };
@@ -1606,9 +1687,17 @@ async function startListening() {
     isListening = false;
     return;
   }
-  document.getElementById('mic-btn').classList.add('active');
-  document.getElementById('mic-state').textContent = isMobileDevice ? 'Tap mic to stop' : (pushToTalk ? 'Hold Space to speak' : 'Listening...');
-  document.getElementById('mic-state').classList.add('active');
+  document.getElementById('mic-btn')?.classList.add('active');
+  if(document.getElementById('mic-state')) document.getElementById('mic-state').textContent = isMobileDevice ? 'Tap mic to stop' : (pushToTalk ? 'Hold Space to speak' : 'Listening...');
+  document.getElementById('mic-state')?.classList.add('active');
+  // Topbar mic button
+  const tmb = document.getElementById('topbar-mic-btn');
+  if (tmb) { tmb.classList.add('mic-active'); document.getElementById('topbar-mic-label').textContent = 'Stop'; }
+  // Show floating HUD on mobile
+  if (isMobileDevice) {
+    const hud = document.getElementById('mic-hud');
+    if (hud) { hud.classList.add('show'); document.getElementById('mic-hud-text').textContent = 'Listening...'; }
+  }
   showToast('info', '🎙 Microphone active');
   if (!isMobileDevice) speak(pushToTalk ? 'Push to talk mode ready' : 'Listening', false);
 }
@@ -1623,11 +1712,17 @@ function stopListening() {
   setStatus('idle');
   updateConfidence(0);
   volumeHistory = [];
-  document.getElementById('mic-btn').classList.remove('active');
-  document.getElementById('mic-state').textContent = 'Click to start listening';
-  document.getElementById('mic-state').classList.remove('active');
+  document.getElementById('mic-btn')?.classList.remove('active');
+  if(document.getElementById('mic-state')) document.getElementById('mic-state').textContent = 'Click to start listening';
+  document.getElementById('mic-state')?.classList.remove('active');
   document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Say a command...</span>';
   document.getElementById('transcript-badge').style.display = 'none';
+  // Topbar mic button
+  const tmb = document.getElementById('topbar-mic-btn');
+  if (tmb) { tmb.classList.remove('mic-active'); document.getElementById('topbar-mic-label').textContent = 'Mic'; }
+  // Hide floating HUD
+  const hud = document.getElementById('mic-hud');
+  if (hud) hud.classList.remove('show');
   drawIdleWaveform();
   speak('Microphone off', false);
 }
@@ -1647,7 +1742,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     pttActive = true;
     document.getElementById('mic-state').textContent = '🎙 Speaking...';
-    document.getElementById('mic-state').classList.add('active');
+    document.getElementById('mic-state')?.classList.add('active');
   }
 });
 document.addEventListener('keyup', (e) => {
@@ -1775,9 +1870,7 @@ function navigateTab(dir){
 }
 function clearActiveTab(){
   const tab=getActiveTab(); tab.undoStack.push(tab.code);
-  if(monacoReady && monacoEditor){ monacoEditor.setValue(''); }
-  else { const el=document.getElementById('code-editor'); if(el) el.value=''; }
-  tab.code=''; tab.modified=true;
+  document.getElementById('code-editor').value=''; tab.code=''; tab.modified=true;
   updateLineNumbers(); renderTabs(); showToast('info','Editor cleared');
 }
 function markActiveModified(){const t=getActiveTab();if(t){t.modified=true;renderTabs();}}
@@ -1891,20 +1984,25 @@ async function simulateCompile(code){
 }
 
 async function jdoodleCompile(code){
-  const res=await fetch(API_BASE+'/compile/jdoodle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+  const cid=(document.getElementById('jd-client')||{}).value||'';
+  const sec=(document.getElementById('jd-secret')||{}).value||'';
+  if(!cid||!sec) throw new Error('JDoodle credentials missing');
+  const res=await fetch('https://api.jdoodle.com/v1/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:cid,clientSecret:sec,script:code,language:'cpp17',versionIndex:'0'})});
   if(!res.ok) throw new Error('JDoodle '+res.status);
   const d=await res.json();
   if(d.error) return{success:false,errors:[d.error]};
-  if(!d.success) return{success:false,errors:[d.error||'JDoodle failed']};
-  return{success:true,output:d.output||''};
+  return d.output?.toLowerCase().includes('error:')?{success:false,errors:[d.output]}:{success:true,output:d.output||''};
 }
 
 async function paizaCompile(code){
-  const res=await fetch(API_BASE+'/compile/paiza',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
-  if(!res.ok) throw new Error('Paiza '+res.status);
-  const d=await res.json();
-  if(!d.success) return{success:false,errors:[d.error||'Paiza failed']};
-  return{success:true,output:d.output||'(no output)'};
+  const cr=await fetch('https://api.paiza.io/runners/create?source_code='+encodeURIComponent(code)+'&language=cpp&api_key=guest',{method:'POST'});
+  if(!cr.ok) throw new Error('Paiza '+cr.status);
+  const id=(await cr.json()).id;
+  await new Promise(r=>setTimeout(r,2500));
+  const gr=await fetch('https://api.paiza.io/runners/get_details?id='+id+'&api_key=guest');
+  if(!gr.ok) throw new Error('Paiza '+gr.status);
+  const d=await gr.json();
+  return d.build_result==='failure'?{success:false,errors:[d.build_stderr||'Build failed']}:{success:true,output:d.stdout||'(no output)'};
 }
 
 // OUTPUT
@@ -1975,11 +2073,16 @@ function showLanding(){
   document.getElementById('landing-page').style.display='block';
   document.getElementById('app-page').style.display='none';
   document.getElementById('nav-pills').style.display='none';
+  const tmb=document.getElementById('topbar-mic-btn');
+  if(tmb && !isMobileDevice) tmb.style.display='none';
 }
 function showEditor(){
   document.getElementById('landing-page').style.display='none';
   document.getElementById('app-page').style.display='block';
   document.getElementById('nav-pills').style.display='flex';
+  // Show topbar mic button on desktop too when in editor
+  const tmb=document.getElementById('topbar-mic-btn');
+  if(tmb && !isMobileDevice) tmb.style.display='flex';
   requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); initMobileNav(); });
 }
 function guardedShowEditor(){
