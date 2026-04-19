@@ -374,7 +374,7 @@ app.post('/compile/jdoodle', async (req, res) => {
 
 // Catch-all: serve index.html for any unknown route (SPA fallback)
 const path = require('path');
-app.get('*', (req, res) => {
+app.get('/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
