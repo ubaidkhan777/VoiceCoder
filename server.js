@@ -235,7 +235,7 @@ app.post('/files/share', async (req, res) => {
       'INSERT INTO public.shared_files (share_id, filename, code, created_at) VALUES ($1, $2, $3, NOW())',
       [id, filename || 'snippet.cpp', code]
     );
-    const url = `${process.env.FRONTEND_URL || 'https://voicecoder.netlify.app/index.html'}?share=${id}`;
+    const url = `${process.env.FRONTEND_URL || 'https://voicecoder-production.up.railway.app'}?share=${id}`;
     res.json({ url });
   } catch (err) {
     console.error('Share error:', err);
@@ -372,8 +372,14 @@ app.post('/compile/jdoodle', async (req, res) => {
   }
 });
 
+// Catch-all: serve index.html for any unknown route (SPA fallback)
+const path = require('path');
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 //  START SERVER
 app.listen(PORT, () => {
   console.log(`🚀  VoiceCoder server running on http://localhost:${PORT}`);
-  console.log(`🌐  Open: http://localhost:${PORT}/voicecoder_ai_sql.html`);
+  console.log(`🌐  Open: http://localhost:${PORT}`);
 });
