@@ -372,7 +372,7 @@ app.post('/compile/jdoodle', async (req, res) => {
   }
 });
 
-// Catch-all: serve index.html for any unknown route (SPA fallback)
+// Catch-all: serve index.html (Express 5 wildcard syntax)
 const path = require('path');
 app.get('/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
@@ -381,5 +381,4 @@ app.get('/{*path}', (req, res) => {
 //  START SERVER
 app.listen(PORT, () => {
   console.log(`🚀  VoiceCoder server running on http://localhost:${PORT}`);
-  console.log(`🌐  Open: http://localhost:${PORT}`);
 });
