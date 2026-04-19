@@ -1775,7 +1775,9 @@ function navigateTab(dir){
 }
 function clearActiveTab(){
   const tab=getActiveTab(); tab.undoStack.push(tab.code);
-  document.getElementById('code-editor').value=''; tab.code=''; tab.modified=true;
+  if(monacoReady && monacoEditor){ monacoEditor.setValue(''); }
+  else { const el=document.getElementById('code-editor'); if(el) el.value=''; }
+  tab.code=''; tab.modified=true;
   updateLineNumbers(); renderTabs(); showToast('info','Editor cleared');
 }
 function markActiveModified(){const t=getActiveTab();if(t){t.modified=true;renderTabs();}}
@@ -1889,25 +1891,20 @@ async function simulateCompile(code){
 }
 
 async function jdoodleCompile(code){
-  const cid=(document.getElementById('jd-client')||{}).value||'';
-  const sec=(document.getElementById('jd-secret')||{}).value||'';
-  if(!cid||!sec) throw new Error('JDoodle credentials missing');
-  const res=await fetch('https://api.jdoodle.com/v1/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:cid,clientSecret:sec,script:code,language:'cpp17',versionIndex:'0'})});
+  const res=await fetch(API_BASE+'/compile/jdoodle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
   if(!res.ok) throw new Error('JDoodle '+res.status);
   const d=await res.json();
   if(d.error) return{success:false,errors:[d.error]};
-  return d.output?.toLowerCase().includes('error:')?{success:false,errors:[d.output]}:{success:true,output:d.output||''};
+  if(!d.success) return{success:false,errors:[d.error||'JDoodle failed']};
+  return{success:true,output:d.output||''};
 }
 
 async function paizaCompile(code){
-  const cr=await fetch('https://api.paiza.io/runners/create?source_code='+encodeURIComponent(code)+'&language=cpp&api_key=guest',{method:'POST'});
-  if(!cr.ok) throw new Error('Paiza '+cr.status);
-  const id=(await cr.json()).id;
-  await new Promise(r=>setTimeout(r,2500));
-  const gr=await fetch('https://api.paiza.io/runners/get_details?id='+id+'&api_key=guest');
-  if(!gr.ok) throw new Error('Paiza '+gr.status);
-  const d=await gr.json();
-  return d.build_result==='failure'?{success:false,errors:[d.build_stderr||'Build failed']}:{success:true,output:d.stdout||'(no output)'};
+  const res=await fetch(API_BASE+'/compile/paiza',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+  if(!res.ok) throw new Error('Paiza '+res.status);
+  const d=await res.json();
+  if(!d.success) return{success:false,errors:[d.error||'Paiza failed']};
+  return{success:true,output:d.output||'(no output)'};
 }
 
 // OUTPUT
