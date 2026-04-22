@@ -887,6 +887,7 @@ let restartDelay = 150;         // ms, doubles each time
 let recognitionRestartTimer = null;
 let lastFinalTranscript = '';   // Avoid duplicate commands
 let interimTranscriptBuffer = '';
+let mobileRestartPending = false; // Prevents double-restart on mobile (onresult + onend race)
 // Spoken punctuation map
 const SPOKEN_PUNCTUATION = {
   ' period':'.', ' full stop':'.', ' comma':',', ' semicolon':';',
@@ -1553,16 +1554,9 @@ function attachRecognitionHandlers(r) {
       if (pushToTalk && !pttActive) return; // PTT: ignore if button released
       processVoiceCommand(finalText.trim(), bestConfidence);
 
-      // On mobile (continuous=false), restart recognition after each final result
-      if (isMobileDevice && isListening) {
-        setTimeout(() => {
-          if (!isListening) return;
-          try {
-            recognition = buildRecognition();
-            if (recognition) { attachRecognitionHandlers(recognition); recognition.start(); }
-          } catch(e) { /* ignore */ }
-        }, 350);
-      }
+      // On mobile (continuous=false), flag that we handled a result so onend
+      // can do ONE clean restart instead of both handlers firing simultaneously.
+      if (isMobileDevice) mobileRestartPending = true;
     }
   };
 
@@ -1603,6 +1597,22 @@ function attachRecognitionHandlers(r) {
 
   r.onend = () => {
     if (!isListening) { setStatus('idle'); return; }
+
+    // On mobile: if we just processed a result, reset the crash counter and do a clean restart
+    if (isMobileDevice && mobileRestartPending) {
+      mobileRestartPending = false;
+      restartAttempts = 0; // successful command — reset backoff
+      clearTimeout(recognitionRestartTimer);
+      recognitionRestartTimer = setTimeout(() => {
+        if (!isListening) return;
+        try {
+          recognition = buildRecognition();
+          if (recognition) { attachRecognitionHandlers(recognition); recognition.start(); }
+        } catch(e) { stopListening(); }
+      }, 600);
+      return;
+    }
+
     // Exponential backoff restart to avoid hammering the API
     if (restartAttempts >= maxRestartAttempts) {
       addLog('error', '🎙 Recognition failed to restart after multiple attempts.');
@@ -1672,6 +1682,7 @@ async function startListening() {
 function stopListening() {
   isListening = false;
   pttActive = false;
+  mobileRestartPending = false;
   clearTimeout(noSpeechTimer);
   clearTimeout(recognitionRestartTimer);
   if (recognition) { try { recognition.abort(); } catch(e) {} recognition = null; }
