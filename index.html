@@ -314,6 +314,9 @@
   /* CLOUD SAVE BUTTON */
   .btn-cloud{background:linear-gradient(135deg,#0ea5e9,#38bdf8);border:1px solid transparent;color:white}
   .btn-cloud:hover{opacity:0.9;transform:scale(1.02)}
+  /* Toolbar icon buttons — show icon + label on desktop */
+  .toolbar-icon-btn{display:flex;align-items:center;gap:5px;padding:5px 9px}
+  .toolbar-icon-btn .btn-label{font-size:11px;white-space:nowrap}
 
   /* URDU TTS INDICATOR */
   .urdu-badge{background:linear-gradient(135deg,#16a34a,#22c55e);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;font-family:var(--mono)}
@@ -401,15 +404,14 @@
     .output-pane { height: 120px; flex-shrink: 0; }
 
     /* ── Editor toolbar: single row on mobile ── */
-    .editor-toolbar { height: 40px; flex-wrap: nowrap; padding: 0 6px; gap: 3px; overflow: hidden; }
+    .editor-toolbar { height: 40px; flex-wrap: nowrap; padding: 0 6px; gap: 2px; overflow: hidden; }
     .tabs-scroll-area { flex: 1; min-width: 0; }
-    .toolbar-actions { flex-shrink: 0; gap: 3px; flex-wrap: nowrap; }
+    .toolbar-actions { flex-shrink: 0; gap: 2px; flex-wrap: nowrap; }
     .tab-add-btn { flex-shrink: 0; }
-    /* Hide text in toolbar buttons on mobile, keep icons */
-    .toolbar-actions .btn-ghost span, .toolbar-actions .btn-ghost:not([id]) { font-size: 0; padding: 4px 6px; }
-    .toolbar-actions .btn svg { margin: 0; }
-    /* Keep Run and AI Fix readable */
-    #compile-btn, #ai-fix-btn, .btn-cloud { font-size: 10px !important; padding: 4px 7px !important; }
+    /* Icon-only on mobile — hide text labels, show just the icon */
+    .toolbar-icon-btn { padding: 6px 7px !important; gap: 0 !important; }
+    .toolbar-icon-btn .btn-label { display: none !important; }
+    .toolbar-icon-btn svg { width: 15px !important; height: 15px !important; margin: 0 !important; }
 
     /* ── Bottom navigation bar ── */
     .mobile-nav {
@@ -662,26 +664,40 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </div>
         <div class="toolbar-actions">
-          <button class="btn btn-ghost btn-sm" onclick="clearActiveTab()">Clear</button>
-          <button class="btn btn-ghost btn-sm" onclick="copyCode()">Copy</button>
-          <button class="btn btn-ghost btn-sm" onclick="saveFileToPC()">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Save
+          <!-- Clear -->
+          <button class="btn btn-ghost btn-sm toolbar-icon-btn" onclick="clearActiveTab()" title="Clear editor">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            <span class="btn-label">Clear</span>
           </button>
-          <button class="btn btn-ghost btn-sm" onclick="loadFileFromPC()">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Load
+          <!-- Copy -->
+          <button class="btn btn-ghost btn-sm toolbar-icon-btn" onclick="copyCode()" title="Copy code">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span class="btn-label">Copy</span>
           </button>
-          <button class="btn btn-ai btn-sm" id="ai-fix-btn" onclick="aiFixErrors()" title="AI Fix Errors">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            AI Fix
+          <!-- Save to PC -->
+          <button class="btn btn-ghost btn-sm toolbar-icon-btn" onclick="saveFileToPC()" title="Save file to PC">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span class="btn-label">Save</span>
           </button>
-          <button class="btn btn-cloud btn-sm" onclick="saveFileToCloud()" title="Save to Supabase Cloud">
-            ☁ Cloud
+          <!-- Load from PC -->
+          <button class="btn btn-ghost btn-sm toolbar-icon-btn" onclick="loadFileFromPC()" title="Load file from PC">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span class="btn-label">Load</span>
           </button>
-          <button class="btn btn-green btn-sm" onclick="compileCode()" id="compile-btn">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Run
+          <!-- AI Fix -->
+          <button class="btn btn-ai btn-sm toolbar-icon-btn" id="ai-fix-btn" onclick="aiFixErrors()" title="AI Fix Errors">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+            <span class="btn-label">AI Fix</span>
+          </button>
+          <!-- Cloud Save -->
+          <button class="btn btn-cloud btn-sm toolbar-icon-btn" onclick="saveFileToCloud()" title="Save to Cloud">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            <span class="btn-label">Cloud</span>
+          </button>
+          <!-- Run -->
+          <button class="btn btn-green btn-sm toolbar-icon-btn" onclick="compileCode()" id="compile-btn" title="Run (Compile)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span class="btn-label">Run</span>
           </button>
         </div>
         <input type="file" id="file-load-input" accept=".cpp,.c,.h,.hpp,.txt,.cc" style="display:none" onchange="handleFileLoad(event)" multiple>
