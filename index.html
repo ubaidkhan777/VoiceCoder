@@ -48,6 +48,7 @@
   .status-dot.processing{background:var(--amber);box-shadow:0 0 8px var(--amber)}
   .status-dot.ai{background:var(--ai);box-shadow:0 0 8px var(--ai);animation:pulse-dot 1s infinite}
   .status-dot.error{background:var(--red)}
+  .status-dot.reconnecting{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:pulse-dot 0.8s infinite}
   @keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:0.7}}
   .status-label{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:90px}
   .btn{padding:7px 14px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:var(--sans);display:flex;align-items:center;gap:6px;white-space:nowrap;border:none}
@@ -1646,13 +1647,20 @@ function attachRecognitionHandlers(r) {
     const errorMessages = {
       'audio-capture': '⚠ No microphone found. Check your audio input.',
       'not-allowed': '🚫 Microphone access denied. Allow it in browser settings.',
-      'network': '📡 Network error. Check your connection.',
       'language-not-supported': `⚠ Language "${recognitionLang}" is not supported.`,
       'service-not-allowed': '🚫 Speech service not allowed.',
       'bad-grammar': '⚠ Grammar error in recognition config.',
     };
     // Silently ignore non-critical transient errors
     if (['no-speech', 'aborted'].includes(event.error)) return;
+
+    // Network errors are transient (WiFi drop, STT server blip) — don't stop listening,
+    // just log quietly and let onend handle the backoff restart automatically.
+    if (event.error === 'network') {
+      addLog('warn', '📡 Network blip — will retry automatically…');
+      setStatus('reconnecting');
+      return; // onend fires next and restarts with backoff
+    }
 
     const msg = errorMessages[event.error] || `Speech error: ${event.error}`;
     showBanner('warn', msg);
@@ -2071,7 +2079,8 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function setStatus(s){
   const d=document.getElementById('status-dot'),l=document.getElementById('status-label'); if(!d||!l) return;
   d.className='status-dot '+s;
-  l.textContent=s==='ai'?'AI thinking...':s;
+  const labels={'ai':'AI thinking...','reconnecting':'reconnecting…'};
+  l.textContent=labels[s]||s;
 }
 function showToast(type,msg){
   const wrap=document.getElementById('toast-wrap');
@@ -4308,21 +4317,43 @@ function oflStartMic() {
     }
   };
 
+  let oflNetworkRetries = 0;
+  const OFL_MAX_NETWORK_RETRIES = 10; // give up after ~30 s of no connectivity
+
   oflRecognition.onerror = (event) => {
     if (event.error === 'no-speech') return; // ignore silence
+    if (event.error === 'aborted')   return; // triggered by our own .abort()
     if (event.error === 'not-allowed') {
       oflAddLog('fail', '✗ Microphone permission denied.');
       oflStopMic();
       return;
     }
+    // Network errors: STT server unreachable (WiFi off, DNS, etc.)
+    // Don't stop — let onend handle backoff restart.
+    if (event.error === 'network') {
+      oflNetworkRetries++;
+      if (oflNetworkRetries >= OFL_MAX_NETWORK_RETRIES) {
+        oflAddLog('fail', '📡 No network after several retries. Click mic to retry when back online.');
+        oflStopMic();
+      } else {
+        oflAddLog('warn', `📡 Network unavailable (retry ${oflNetworkRetries}/${OFL_MAX_NETWORK_RETRIES})…`);
+      }
+      return; // onend fires and restarts with backoff below
+    }
     oflAddLog('fail', `✗ Speech error: ${event.error}`);
   };
 
   oflRecognition.onend = () => {
-    if (oflIsListening) {
-      // Auto-restart for continuous listening
-      try { oflRecognition.start(); } catch(e) { oflStopMic(); }
-    }
+    if (!oflIsListening) return;
+    // Use exponential backoff when retrying after network errors
+    const delay = oflNetworkRetries > 0
+      ? Math.min(1000 * Math.pow(1.8, oflNetworkRetries - 1), 8000)
+      : 300;
+    setTimeout(() => {
+      if (!oflIsListening) return;
+      try { oflRecognition.start(); oflNetworkRetries = 0; }
+      catch(e) { oflStopMic(); }
+    }, delay);
   };
 
   try {
