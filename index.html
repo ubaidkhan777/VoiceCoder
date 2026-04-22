@@ -1475,10 +1475,12 @@ function buildRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return null;
   const r = new SR();
-  r.continuous = true;
+  // Mobile Chrome does NOT support continuous=true reliably — it fires onend immediately.
+  // On mobile we use continuous=false and manually restart after each result.
+  r.continuous = !isMobileDevice;
   r.interimResults = true;
   r.lang = recognitionLang;
-  r.maxAlternatives = 3;
+  r.maxAlternatives = isMobileDevice ? 1 : 3;
   return r;
 }
 
@@ -1492,7 +1494,7 @@ function attachRecognitionHandlers(r) {
     addLog('info', `🎙 Recognition started [${recognitionLang}]`);
   };
 
-  r.onaudiostart = () => { startAudioContext(); };
+  r.onaudiostart = () => { if (!isMobileDevice) startAudioContext(); };
 
   r.onsoundstart = () => {
     // Clear "no speech" placeholder when sound is detected
@@ -1550,6 +1552,17 @@ function attachRecognitionHandlers(r) {
       setStatus('processing');
       if (pushToTalk && !pttActive) return; // PTT: ignore if button released
       processVoiceCommand(finalText.trim(), bestConfidence);
+
+      // On mobile (continuous=false), restart recognition after each final result
+      if (isMobileDevice && isListening) {
+        setTimeout(() => {
+          if (!isListening) return;
+          try {
+            recognition = buildRecognition();
+            if (recognition) { attachRecognitionHandlers(recognition); recognition.start(); }
+          } catch(e) { /* ignore */ }
+        }, 350);
+      }
     }
   };
 
@@ -1597,7 +1610,7 @@ function attachRecognitionHandlers(r) {
       stopListening();
       return;
     }
-    const delay = isMobileDevice ? 300 : Math.min(restartDelay * Math.pow(1.5, restartAttempts), 3000);
+    const delay = isMobileDevice ? 600 : Math.min(restartDelay * Math.pow(1.5, restartAttempts), 3000);
     restartAttempts++;
     clearTimeout(recognitionRestartTimer);
     recognitionRestartTimer = setTimeout(() => {
