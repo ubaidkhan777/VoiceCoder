@@ -2845,8 +2845,8 @@ async function compileCode() {
 function renderSettingsPanel() {
   return `<div>
     <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">AI</div>
-    <div class="ai-key-notice">Paste your OpenAI API key to enable AI features.<br><a onclick="window.open('https://platform.openai.com/api-keys')">Get a key →</a></div>
-    <input class="api-key-input" id="openai-api-key" type="password" placeholder="sk-..." oninput="localStorage.setItem('vc_openai_apikey',this.value.trim())">
+    <div class="ai-key-notice" id="ai-key-notice" style="${localStorage.getItem('vc_openai_apikey')?'display:none':''}">Paste your OpenAI API key to enable AI features.<br><a onclick="window.open('https://platform.openai.com/api-keys')">Get a key →</a></div>
+    <input class="api-key-input" id="openai-api-key" type="password" placeholder="sk-..." value="${localStorage.getItem('vc_openai_apikey')||''}" oninput="localStorage.setItem('vc_openai_apikey',this.value.trim());const n=document.getElementById('ai-key-notice');if(n)n.style.display=this.value.trim()?'none':''">
     <div class="setting-row" style="margin-top:8px">
       <div><div class="setting-label">AI mode</div><div class="setting-sub">Use GPT-4o for voice</div></div>
       <button class="toggle ${aiMode?'on':''}" onclick="aiMode=!aiMode;this.className='toggle '+(aiMode?'on':'');showToast('info','AI mode '+(aiMode?'on':'off'))"></button>
@@ -2893,12 +2893,6 @@ function renderSettingsPanel() {
         }else{showToast('info','Urdu voice off');}
       "></button>
     </div>
-    ${!getUrduVoice()?`<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--amber);line-height:1.7;margin-bottom:4px">
-      <b>How to install Urdu voice on your laptop:</b><br>
-      <b>Windows:</b> Settings → Time &amp; Language → Speech → Add voices → search "Urdu"<br>
-      <b>Mac:</b> System Settings → Accessibility → Spoken Content → System Voice → Manage → search "Urdu"<br>
-      <b>Chrome (any OS):</b> Uses Google online TTS — must be online and allow speech permissions
-    </div>`:''}
     <div class="setting-row" style="${ttsSupported?'':'opacity:0.4;pointer-events:none'}">
       <div><div class="setting-label">TTS status</div><div class="setting-sub">${ttsSupported?'Available in this browser':'Not supported'}</div></div>
       <button class="btn btn-ghost btn-sm" onclick="speak('Voice feedback test. Hello from VoiceCoder!',true)">Test</button>
