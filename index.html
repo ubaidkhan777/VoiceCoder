@@ -368,17 +368,17 @@
       flex-direction: column;
     }
 
-    /* ── Sidebar: hidden by default, full-screen overlay when open ── */
+    /* ── Sidebar: hidden by default, slides in from left like desktop ── */
     .sidebar {
       display: none;
       position: fixed;
       top: 48px;
       left: 0;
-      right: 0;
       bottom: 56px;
       z-index: 200;
       overflow-y: auto;
-      width: 100%;
+      width: 260px;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.4);
     }
     .sidebar.mobile-open { display: flex; flex-direction: column; }
 
@@ -472,18 +472,76 @@
   }
 
 
-  #topbar-mic-btn { display:none; align-items:center; gap:6px; padding:5px 11px; border-radius:8px; border:1.5px solid var(--border2); background:var(--bg3); color:var(--text2); font-family:var(--sans); font-size:11px; font-weight:600; cursor:pointer; transition:all 0.2s; -webkit-tap-highlight-color:transparent; }
-  #topbar-mic-btn.mic-active { background:rgba(34,211,160,0.15) !important; border-color:var(--green) !important; color:var(--green) !important; box-shadow:0 0 10px rgba(34,211,160,0.3); animation:mic-pulse 1.4s infinite; }
-  @keyframes mic-pulse { 0%,100%{box-shadow:0 0 6px rgba(34,211,160,0.2);} 50%{box-shadow:0 0 16px rgba(34,211,160,0.5);} }
-  #mic-hud { display:none; position:fixed; top:58px; left:50%; transform:translateX(-50%); background:var(--bg2); border:1px solid var(--border2); border-radius:12px; padding:8px 14px; z-index:500; align-items:center; gap:10px; box-shadow:0 4px 20px rgba(0,0,0,0.45); min-width:220px; max-width:90vw; font-family:var(--mono); font-size:12px; }
-  #mic-hud.show { display:flex; }
-  #mic-hud-dot { width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green); flex-shrink:0; animation:pulse-dot 1s infinite; }
-  #mic-hud-text { color:var(--text); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #mic-hud-close { background:none; border:none; color:var(--text3); cursor:pointer; padding:2px 4px; font-size:15px; line-height:1; flex-shrink:0; -webkit-tap-highlight-color:transparent; }
+  /* ── Topbar mic button ── */
+  #topbar-mic-btn {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text2);
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  #topbar-mic-btn.mic-active {
+    background: rgba(34,211,160,0.15) !important;
+    border-color: var(--green) !important;
+    color: var(--green) !important;
+    box-shadow: 0 0 12px rgba(34,211,160,0.3);
+    animation: topbar-mic-pulse 1.4s infinite;
+  }
+  @keyframes topbar-mic-pulse {
+    0%,100% { box-shadow: 0 0 6px rgba(34,211,160,0.2); }
+    50%      { box-shadow: 0 0 18px rgba(34,211,160,0.5); }
+  }
+
+  /* ── Floating mic HUD (shows while listening on mobile) ── */
+  #mic-hud {
+    display: none;
+    position: fixed;
+    top: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 9px 14px;
+    z-index: 500;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    min-width: 230px;
+    max-width: 92vw;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  #mic-hud.show { display: flex; }
+  #mic-hud-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    flex-shrink: 0;
+    animation: pulse-dot 1s infinite;
+  }
+  #mic-hud-text { color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #mic-hud-close {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; padding: 2px 4px; font-size: 16px; line-height: 1;
+    flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Mobile overrides ── */
   @media (max-width: 768px) {
-    #topbar-mic-btn { display:flex !important; }
-    .status-dot, .status-label { display:none !important; }
-    #mnav-mic { display:none !important; }
+    #topbar-mic-btn { display: flex !important; }
+    #mnav-mic { display: none !important; }
   }
 </style>
 </head>
@@ -504,7 +562,12 @@
   </div>
   <div class="topbar-right">
     <button id="topbar-mic-btn" onclick="toggleMic()" title="Toggle microphone (Ctrl+M)">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
       <span id="topbar-mic-label">Mic</span>
     </button>
     <div class="status-dot" id="status-dot"></div>
@@ -823,7 +886,11 @@
 </div>
 
 <div class="toast-wrap" id="toast-wrap"></div>
-<div id="mic-hud"><div id="mic-hud-dot"></div><span id="mic-hud-text">Listening...</span><button id="mic-hud-close" onclick="stopListening()">✕</button></div>
+<div id="mic-hud">
+  <div id="mic-hud-dot"></div>
+  <span id="mic-hud-text">Listening...</span>
+  <button id="mic-hud-close" onclick="stopListening()" title="Stop mic">✕</button>
+</div>
 
 <!-- MOBILE OVERLAY -->
 <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobilePanels()"></div>
@@ -1497,9 +1564,9 @@ function attachRecognitionHandlers(r) {
       document.getElementById('transcript-badge').style.display = finalText ? 'none' : 'inline-block';
     }
 
-    // Live update HUD with what's being heard
-    const _hudEl = document.getElementById('mic-hud-text');
-    if (_hudEl && isListening) _hudEl.textContent = (interim || finalText || 'Listening...').slice(0,60);
+    // Update floating HUD with live transcript
+    const _ht = document.getElementById('mic-hud-text');
+    if (_ht && isListening) _ht.textContent = (interim || finalText || 'Listening...').slice(0, 60);
 
     if (finalText.trim()) {
       // Dedup: ignore if same as last command within 1.5s
@@ -1608,10 +1675,12 @@ async function startListening() {
   }
   document.getElementById('mic-btn')?.classList.add('active');
   if(document.getElementById('mic-state')){document.getElementById('mic-state').textContent=isMobileDevice?'Tap mic to stop':(pushToTalk?'Hold Space to speak':'Listening...');document.getElementById('mic-state').classList.add('active');}
-  const _smb=document.getElementById('topbar-mic-btn');
-  if(_smb){_smb.classList.add('mic-active');document.getElementById('topbar-mic-label').textContent='Stop';}
-  const _sh=document.getElementById('mic-hud');
-  if(_sh){_sh.classList.add('show');document.getElementById('mic-hud-text').textContent='Listening...';}
+  const _tmb = document.getElementById('topbar-mic-btn');
+  if (_tmb) { _tmb.classList.add('mic-active'); document.getElementById('topbar-mic-label').textContent = 'Stop'; }
+  if (isMobileDevice) {
+    const _hud = document.getElementById('mic-hud');
+    if (_hud) { _hud.classList.add('show'); document.getElementById('mic-hud-text').textContent = 'Listening...'; }
+  }
   showToast('info', '🎙 Microphone active');
   if (!isMobileDevice) speak(pushToTalk ? 'Push to talk mode ready' : 'Listening', false);
 }
@@ -1627,12 +1696,12 @@ function stopListening() {
   updateConfidence(0);
   document.getElementById('mic-btn')?.classList.remove('active');
   if(document.getElementById('mic-state')){document.getElementById('mic-state').textContent='Click to start listening';document.getElementById('mic-state').classList.remove('active');}
-  document.getElementById('transcript').innerHTML='<span class="transcript-placeholder">Say a command...</span>';
-  document.getElementById('transcript-badge').style.display='none';
-  const _xmb=document.getElementById('topbar-mic-btn');
-  if(_xmb){_xmb.classList.remove('mic-active');document.getElementById('topbar-mic-label').textContent='Mic';}
-  const _xh=document.getElementById('mic-hud');
-  if(_xh)_xh.classList.remove('show');
+  document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Say a command...</span>';
+  document.getElementById('transcript-badge').style.display = 'none';
+  const _xmb = document.getElementById('topbar-mic-btn');
+  if (_xmb) { _xmb.classList.remove('mic-active'); document.getElementById('topbar-mic-label').textContent = 'Mic'; }
+  const _xhud = document.getElementById('mic-hud');
+  if (_xhud) _xhud.classList.remove('show');
   drawIdleWaveform();
   speak('Microphone off', false);
 }
@@ -1984,8 +2053,8 @@ function showEditor(){
   document.getElementById('landing-page').style.display='none';
   document.getElementById('app-page').style.display='block';
   document.getElementById('nav-pills').style.display='flex';
-  const _emb=document.getElementById('topbar-mic-btn');
-  if(_emb) _emb.style.display='flex';
+  const _emb = document.getElementById('topbar-mic-btn');
+  if (_emb) _emb.style.display = 'flex';
   requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); initMobileNav(); });
 }
 function guardedShowEditor(){
@@ -2758,11 +2827,7 @@ function renderSettingsPanel() {
       <div><div class="setting-label">Push-to-Talk</div><div class="setting-sub">Hold <kbd style="font-family:var(--mono);background:var(--bg4);padding:1px 4px;border-radius:3px;font-size:9px">Space</kbd> to speak</div></div>
       <button class="toggle ${pushToTalk?'on':''}" onclick="pushToTalk=!pushToTalk;this.className='toggle '+(pushToTalk?'on':'');if(isListening)document.getElementById('mic-state').textContent=pushToTalk?'Hold Space to speak':'Listening...';showToast('info','Push-to-Talk '+(pushToTalk?'on':'off'))"></button>
     </div>
-    <div class="setting-row">
-      <div><div class="setting-label">Noise Gate</div><div class="setting-sub">Filter background noise</div></div>
-      <select class="sel" style="display:none">
-      </select>
-    </div>
+
     <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">🔊 Voice Feedback (TTS)</div>
     <div class="setting-row">
       <div><div class="setting-label">Speak confirmations</div><div class="setting-sub">Audible command feedback</div></div>
