@@ -1478,8 +1478,8 @@ function speak(text, urgent=false) {
   utt.rate = 1.1;
   utt.pitch = 1.0;
   utt.volume = 0.75;
-  // Prefer a natural-sounding voice if available
-  const voices = window.speechSynthesis.getVoices();
+  // Use cached voices (populated via onvoiceschanged) for reliable voice selection
+  const voices = _cachedVoices.length ? _cachedVoices : window.speechSynthesis.getVoices();
   const pref = voices.find(v => v.lang.startsWith('en') && /natural|google|samantha|karen|moira/i.test(v.name));
   if (pref) utt.voice = pref;
   window.speechSynthesis.speak(utt);
@@ -2510,18 +2510,50 @@ async function aiExplainErrors(errors) {
 // URDU TTS — speak in اردو
 // ═══════════════════════════════════════════════
 let urduTtsEnabled = false;
+let _cachedVoices = [];
+
+// Voices load asynchronously — cache them when ready
+function loadVoices() {
+  _cachedVoices = window.speechSynthesis.getVoices();
+}
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices(); // also try immediately (Firefox populates synchronously)
+}
+
+function getUrduVoice() {
+  const voices = _cachedVoices.length ? _cachedVoices : window.speechSynthesis.getVoices();
+  // Try exact matches first, then broad fallbacks
+  return voices.find(v => v.lang === 'ur-PK')
+      || voices.find(v => v.lang === 'ur')
+      || voices.find(v => v.lang.startsWith('ur'))
+      || voices.find(v => v.name.toLowerCase().includes('urdu'))
+      || null;
+}
 
 function speakUrdu(text) {
   if (!ttsSupported) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
   utt.lang = 'ur-PK';
-  utt.rate = 0.95;
+  utt.rate = 0.9;
   utt.pitch = 1.0;
-  const voices = window.speechSynthesis.getVoices();
-  const urduVoice = voices.find(v => v.lang === 'ur-PK' || v.lang === 'ur' || v.name.toLowerCase().includes('urdu'));
-  if (urduVoice) utt.voice = urduVoice;
-  window.speechSynthesis.speak(utt);
+  utt.volume = 1.0;
+
+  const urduVoice = getUrduVoice();
+  if (urduVoice) {
+    utt.voice = urduVoice;
+    window.speechSynthesis.speak(utt);
+  } else {
+    // No Urdu voice installed on this device — guide the user
+    showToast('warn', '⚠ No Urdu voice found. Install from OS settings (see below).');
+    addLog('warn', '🔊 Urdu TTS: no ur-PK voice installed on this device.');
+    // Speak in English as fallback so user at least hears something
+    const fallbackUtt = new SpeechSynthesisUtterance(text);
+    fallbackUtt.lang = 'en-US';
+    fallbackUtt.rate = 0.9;
+    window.speechSynthesis.speak(fallbackUtt);
+  }
 }
 
 function speakFeedback(text, isSuccess) {
@@ -2847,10 +2879,26 @@ function renderSettingsPanel() {
     <div class="setting-row">
       <div>
         <div class="setting-label">🗣 Urdu Voice (اردو) <span class="urdu-badge">پاکستان</span></div>
-        <div class="setting-sub">Responses in Urdu TTS</div>
+        <div class="setting-sub" id="urdu-voice-status">${(()=>{const v=getUrduVoice();return v?'✅ Voice found: '+v.name:'⚠ No Urdu voice — install from OS settings'})()}</div>
       </div>
-      <button class="toggle ${urduTtsEnabled?'on':''}" id="urdu-toggle" onclick="urduTtsEnabled=!urduTtsEnabled;this.className='toggle '+(urduTtsEnabled?'on':'');showToast('info',urduTtsEnabled?'اردو آواز فعال':'Urdu voice off');if(urduTtsEnabled)speakUrdu('سلام، وائس کوڈر میں خوش آمدید')"></button>
+      <button class="toggle ${urduTtsEnabled?'on':''}" id="urdu-toggle" onclick="
+        urduTtsEnabled=!urduTtsEnabled;
+        this.className='toggle '+(urduTtsEnabled?'on':'');
+        const sv=document.getElementById('urdu-voice-status');
+        const uv=getUrduVoice();
+        if(sv)sv.textContent=uv?'✅ Voice: '+uv.name:'⚠ No Urdu voice — install from OS settings';
+        if(urduTtsEnabled){
+          if(getUrduVoice()){speakUrdu('سلام، وائس کوڈر میں خوش آمدید');showToast('info','اردو آواز فعال');}
+          else{showToast('warn','⚠ Install Urdu voice first (see instructions below)');}
+        }else{showToast('info','Urdu voice off');}
+      "></button>
     </div>
+    ${!getUrduVoice()?`<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--amber);line-height:1.7;margin-bottom:4px">
+      <b>How to install Urdu voice on your laptop:</b><br>
+      <b>Windows:</b> Settings → Time &amp; Language → Speech → Add voices → search "Urdu"<br>
+      <b>Mac:</b> System Settings → Accessibility → Spoken Content → System Voice → Manage → search "Urdu"<br>
+      <b>Chrome (any OS):</b> Uses Google online TTS — must be online and allow speech permissions
+    </div>`:''}
     <div class="setting-row" style="${ttsSupported?'':'opacity:0.4;pointer-events:none'}">
       <div><div class="setting-label">TTS status</div><div class="setting-sub">${ttsSupported?'Available in this browser':'Not supported'}</div></div>
       <button class="btn btn-ghost btn-sm" onclick="speak('Voice feedback test. Hello from VoiceCoder!',true)">Test</button>
