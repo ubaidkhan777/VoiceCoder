@@ -48,7 +48,6 @@
   .status-dot.processing{background:var(--amber);box-shadow:0 0 8px var(--amber)}
   .status-dot.ai{background:var(--ai);box-shadow:0 0 8px var(--ai);animation:pulse-dot 1s infinite}
   .status-dot.error{background:var(--red)}
-  .status-dot.reconnecting{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:pulse-dot 0.8s infinite}
   @keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:0.7}}
   .status-label{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:90px}
   .btn{padding:7px 14px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:var(--sans);display:flex;align-items:center;gap:6px;white-space:nowrap;border:none}
@@ -1647,20 +1646,13 @@ function attachRecognitionHandlers(r) {
     const errorMessages = {
       'audio-capture': '⚠ No microphone found. Check your audio input.',
       'not-allowed': '🚫 Microphone access denied. Allow it in browser settings.',
+      'network': '📡 Network error. Check your connection.',
       'language-not-supported': `⚠ Language "${recognitionLang}" is not supported.`,
       'service-not-allowed': '🚫 Speech service not allowed.',
       'bad-grammar': '⚠ Grammar error in recognition config.',
     };
     // Silently ignore non-critical transient errors
     if (['no-speech', 'aborted'].includes(event.error)) return;
-
-    // Network errors are transient (WiFi drop, STT server blip) — don't stop listening,
-    // just log quietly and let onend handle the backoff restart automatically.
-    if (event.error === 'network') {
-      addLog('warn', '📡 Network blip — will retry automatically…');
-      setStatus('reconnecting');
-      return; // onend fires next and restarts with backoff
-    }
 
     const msg = errorMessages[event.error] || `Speech error: ${event.error}`;
     showBanner('warn', msg);
@@ -2079,8 +2071,7 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function setStatus(s){
   const d=document.getElementById('status-dot'),l=document.getElementById('status-label'); if(!d||!l) return;
   d.className='status-dot '+s;
-  const labels={'ai':'AI thinking...','reconnecting':'reconnecting…'};
-  l.textContent=labels[s]||s;
+  l.textContent=s==='ai'?'AI thinking...':s;
 }
 function showToast(type,msg){
   const wrap=document.getElementById('toast-wrap');
@@ -3258,6 +3249,15 @@ function mobileShowAI() {
   border-color: var(--green);
   animation: ofl-mic-pulse 1.4s infinite;
 }
+.ofl-mic-ring.loading {
+  border-color: var(--amber);
+  animation: ofl-mic-spin 1.2s linear infinite;
+}
+@keyframes ofl-mic-spin {
+  from { box-shadow: 0 0 0 4px rgba(251,191,36,.3); transform: scale(1); }
+  50%  { box-shadow: 0 0 0 10px rgba(251,191,36,.1); transform: scale(1.03); }
+  to   { box-shadow: 0 0 0 4px rgba(251,191,36,.3); transform: scale(1); }
+}
 .ofl-mic-ring.listening svg { stroke: white; }
 @keyframes ofl-mic-pulse {
   0%,100% { box-shadow: 0 0 0 6px rgba(16,185,129,.2), 0 0 0 14px rgba(16,185,129,.08); }
@@ -3398,7 +3398,7 @@ function mobileShowAI() {
       <line x1="8" y1="23" x2="16" y2="23"/>
     </svg>
     <span class="ofl-title">Offline Voice Mode</span>
-    <span class="ofl-badge">NO INTERNET NEEDED</span>
+    <span class="ofl-badge">WHISPER · NO INTERNET</span>
     <button class="btn btn-ghost btn-sm" onclick="toggleOfflinePanel()" style="margin-left:auto">✕ Close</button>
   </div>
 
@@ -3414,7 +3414,7 @@ function mobileShowAI() {
             <line x1="8" y1="23" x2="16" y2="23"/>
           </svg>
         </div>
-        <div class="ofl-mic-label" id="ofl-mic-label">Click mic to start<br>offline voice coding</div>
+        <div class="ofl-mic-label" id="ofl-mic-label">Click to load Whisper<br>& start offline STT</div>
         <button class="btn btn-green btn-sm" onclick="oflToggleMic()" id="ofl-toggle-btn" style="width:100%">
           ▶ Start Listening
         </button>
@@ -4153,7 +4153,6 @@ q.pop();`
 ];
 
 // ── Voice recognition engine ───────────────────────────────────
-let oflRecognition = null;
 let oflIsListening = false;
 let oflLogEntries  = [];
 
@@ -4266,109 +4265,158 @@ function oflAddLog(type, text) {
 
 function oflLogInfo(text) { oflAddLog('info', text); }
 
-// ── Mic toggle ────────────────────────────────────────────────
-function oflToggleMic() {
-  if (oflIsListening) {
-    oflStopMic();
-  } else {
-    oflStartMic();
+// ═══════════════════════════════════════════════════════════════
+//  TRUE OFFLINE STT — Whisper (tiny.en) via Transformers.js
+//  Runs 100% in-browser (WebAssembly). No internet after first load.
+//  First use: ~40 MB model download, cached by browser forever.
+// ═══════════════════════════════════════════════════════════════
+
+let whisperPipeline   = null;   // loaded once, reused
+let whisperLoading    = false;
+let oflMediaRecorder  = null;
+let oflAudioChunks    = [];
+let oflRecordTimer    = null;
+const OFL_CHUNK_MS    = 4000;   // record 4-second windows then transcribe
+
+// Load Whisper model (lazy — only on first mic click)
+async function oflLoadWhisper() {
+  if (whisperPipeline)  return whisperPipeline;
+  if (whisperLoading)   return null;
+  whisperLoading = true;
+
+  oflAddLog('info', '⏳ Loading Whisper model (~40 MB, cached after first use)…');
+  oflSetTranscript('Loading offline model…', false);
+  const ring = document.getElementById('ofl-mic-ring');
+  if (ring) ring.classList.add('loading');
+
+  try {
+    // Transformers.js v3 — ESM CDN, works fully offline after cache
+    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
+    env.allowLocalModels = false; // use HF CDN, browser caches the weights
+    whisperPipeline = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
+      progress_callback: (p) => {
+        if (p.status === 'downloading') {
+          const pct = p.total ? Math.round(p.loaded / p.total * 100) : '…';
+          oflSetTranscript(`Downloading model: ${pct}%`, false);
+        }
+      }
+    });
+    if (ring) ring.classList.remove('loading');
+    oflAddLog('ok', '✓ Whisper model ready. 100% offline STT active.');
+    oflSetTranscript('Model ready — say a command!', false);
+    whisperLoading = false;
+    return whisperPipeline;
+  } catch(err) {
+    if (ring) ring.classList.remove('loading');
+    oflAddLog('fail', '✗ Could not load Whisper: ' + err.message);
+    oflSetTranscript('Model load failed. Check console.', false);
+    whisperLoading = false;
+    return null;
   }
 }
 
-function oflStartMic() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    oflAddLog('fail', '✗ Speech Recognition not supported in this browser. Use Chrome or Edge.');
-    if (typeof showToast === 'function') showToast('error', 'Speech not supported. Use Chrome/Edge.');
+// ── Mic toggle ────────────────────────────────────────────────
+function oflToggleMic() {
+  if (oflIsListening) oflStopMic();
+  else                oflStartMic();
+}
+
+async function oflStartMic() {
+  if (oflIsListening) return;
+
+  // 1. Ensure mic permission
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch(err) {
+    oflAddLog('fail', '✗ Microphone access denied: ' + err.message);
+    if (typeof showToast === 'function') showToast('error', 'Mic permission denied.');
     return;
   }
 
-  if (oflRecognition) { try { oflRecognition.abort(); } catch(e){} }
+  // 2. Load Whisper (no-op after first load)
+  const pipe = await oflLoadWhisper();
+  if (!pipe) { stream.getTracks().forEach(t => t.stop()); return; }
 
-  oflRecognition = new SpeechRecognition();
-  oflRecognition.continuous     = true;
-  oflRecognition.interimResults = true;
-  oflRecognition.lang           = 'en-US';
-  oflRecognition.maxAlternatives = 1;
+  oflIsListening = true;
+  oflUpdateMicUI(true);
+  oflAddLog('info', '🎙 Microphone started. Listening… (WiFi not required)');
 
-  oflRecognition.onstart = () => {
-    oflIsListening = true;
-    oflUpdateMicUI(true);
-    oflLogInfo('🎙 Microphone started. Listening…');
-  };
-
-  oflRecognition.onresult = (event) => {
-    let interim = '';
-    let final   = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const t = event.results[i][0].transcript;
-      if (event.results[i].isFinal) final += t;
-      else interim += t;
-    }
-    // Show live transcript
-    const box = document.getElementById('ofl-transcript');
-    if (box) {
-      box.textContent = (final || interim || '…');
-      box.className = 'ofl-transcript-box' + (interim && !final ? ' live' : '');
-    }
-    if (final.trim()) {
-      const cmd = oflMatchCommand(final.trim());
-      oflExecuteCommand(cmd, final.trim());
-    }
-  };
-
-  let oflNetworkRetries = 0;
-  const OFL_MAX_NETWORK_RETRIES = 10; // give up after ~30 s of no connectivity
-
-  oflRecognition.onerror = (event) => {
-    if (event.error === 'no-speech') return; // ignore silence
-    if (event.error === 'aborted')   return; // triggered by our own .abort()
-    if (event.error === 'not-allowed') {
-      oflAddLog('fail', '✗ Microphone permission denied.');
-      oflStopMic();
-      return;
-    }
-    // Network errors: STT server unreachable (WiFi off, DNS, etc.)
-    // Don't stop — let onend handle backoff restart.
-    if (event.error === 'network') {
-      oflNetworkRetries++;
-      if (oflNetworkRetries >= OFL_MAX_NETWORK_RETRIES) {
-        oflAddLog('fail', '📡 No network after several retries. Click mic to retry when back online.');
-        oflStopMic();
-      } else {
-        oflAddLog('warn', `📡 Network unavailable (retry ${oflNetworkRetries}/${OFL_MAX_NETWORK_RETRIES})…`);
-      }
-      return; // onend fires and restarts with backoff below
-    }
-    oflAddLog('fail', `✗ Speech error: ${event.error}`);
-  };
-
-  oflRecognition.onend = () => {
+  // 3. Start chunked recording loop
+  function startChunk() {
     if (!oflIsListening) return;
-    // Use exponential backoff when retrying after network errors
-    const delay = oflNetworkRetries > 0
-      ? Math.min(1000 * Math.pow(1.8, oflNetworkRetries - 1), 8000)
-      : 300;
-    setTimeout(() => {
-      if (!oflIsListening) return;
-      try { oflRecognition.start(); oflNetworkRetries = 0; }
-      catch(e) { oflStopMic(); }
-    }, delay);
-  };
+    oflAudioChunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus' : 'audio/webm';
+    oflMediaRecorder = new MediaRecorder(stream, { mimeType });
 
+    oflMediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) oflAudioChunks.push(e.data);
+    };
+
+    oflMediaRecorder.onstop = async () => {
+      if (!oflIsListening || oflAudioChunks.length === 0) return;
+      const blob = new Blob(oflAudioChunks, { type: mimeType });
+      await oflTranscribeBlob(blob);
+      if (oflIsListening) startChunk(); // next window
+    };
+
+    oflMediaRecorder.start();
+    oflRecordTimer = setTimeout(() => {
+      if (oflMediaRecorder && oflMediaRecorder.state === 'recording') {
+        oflMediaRecorder.stop();
+      }
+    }, OFL_CHUNK_MS);
+  }
+
+  startChunk();
+}
+
+async function oflTranscribeBlob(blob) {
   try {
-    oflRecognition.start();
-  } catch(e) {
-    oflAddLog('fail', '✗ Could not start microphone: ' + e.message);
+    oflSetTranscript('🔄 Transcribing…', false);
+    // Convert blob → float32 PCM via AudioContext (works offline)
+    const arrayBuf = await blob.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    const decoded  = await audioCtx.decodeAudioData(arrayBuf);
+    audioCtx.close();
+
+    const rawPCM = decoded.getChannelData(0); // mono float32
+
+    const result = await whisperPipeline(rawPCM, {
+      language: 'english',
+      task: 'transcribe',
+      chunk_length_s: 30,
+    });
+
+    const text = (result.text || '').trim();
+    if (!text || text.toLowerCase() === '[blank_audio]') return;
+
+    oflSetTranscript(text, true);
+    const cmd = oflMatchCommand(text);
+    oflExecuteCommand(cmd, text);
+  } catch(err) {
+    // Silently skip bad chunks — don't stop the mic
+    console.warn('[Whisper] transcribe error:', err);
+  }
+}
+
+function oflSetTranscript(text, isFinal) {
+  const box = document.getElementById('ofl-transcript');
+  if (box) {
+    box.textContent = text;
+    box.className   = 'ofl-transcript-box' + (isFinal ? '' : ' live');
   }
 }
 
 function oflStopMic() {
   oflIsListening = false;
-  if (oflRecognition) {
-    try { oflRecognition.stop(); } catch(e){}
-    oflRecognition = null;
+  clearTimeout(oflRecordTimer);
+  if (oflMediaRecorder && oflMediaRecorder.state !== 'inactive') {
+    try { oflMediaRecorder.stop(); } catch(e) {}
   }
+  oflMediaRecorder = null;
+  oflAudioChunks   = [];
   oflUpdateMicUI(false);
   oflAddLog('info', '⏹ Microphone stopped.');
 }
@@ -4378,7 +4426,7 @@ function oflUpdateMicUI(active) {
   const label = document.getElementById('ofl-mic-label');
   const btn   = document.getElementById('ofl-toggle-btn');
   if (ring)  ring.classList.toggle('listening', active);
-  if (label) { label.textContent = active ? '🎙 Listening…\nSpeak a C++ command' : 'Click mic to start\noffline voice coding'; label.className = 'ofl-mic-label' + (active ? ' active' : ''); }
+  if (label) { label.textContent = active ? '🎙 Listening…\nSpeak a C++ command' : 'Click to load Whisper\n& start offline STT'; label.className = 'ofl-mic-label' + (active ? ' active' : ''); }
   if (btn)   { btn.textContent = active ? '⏹ Stop Listening' : '▶ Start Listening'; btn.className = 'btn btn-sm ' + (active ? 'btn-accent' : 'btn-green'); btn.style.width = '100%'; }
 }
 
