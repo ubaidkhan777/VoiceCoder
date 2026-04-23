@@ -1356,18 +1356,30 @@ const GROUPS = [
 ];
 
 
+// Safe in-memory store for cloud file payloads — avoids inlining code into HTML attributes
+const _cloudFileCache = {};
+
 async function loadDashboardFiles(){
   const el = document.getElementById('cloud-files-list');
   if(!el) return;
   if(!currentUser){ el.innerHTML='<div style="color:var(--text3);font-size:11px">Sign in to see cloud files</div>'; return; }
+  el.innerHTML='<div style="color:var(--text3);font-size:11px">Loading...</div>';
   const files = await loadCloudFiles();
   if(!files || !files.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px">No cloud files yet</div>'; return; }
+  // Cache file data by id so onclick handlers never embed raw code in HTML
+  files.forEach(f => { _cloudFileCache[f.id] = { filename: f.filename, code: f.code }; });
   el.innerHTML = files.map(f=>`
     <div class="file-row">
-      <span class="file-row-name" onclick="openCloudFile('${f.id}','${escHtml(f.filename)}',${JSON.stringify(f.code)})" title="Click to open">${escHtml(f.filename)}</span>
+      <span class="file-row-name" onclick="openCloudFileById(${f.id})" title="Click to open">${escHtml(f.filename)}</span>
       <span class="file-row-date">${new Date(f.updated_at).toLocaleDateString()}</span>
       <button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:4px;color:var(--red)" onclick="deleteCloudFile(${f.id})" title="Delete">✕</button>
     </div>`).join('');
+}
+
+function openCloudFileById(id) {
+  const f = _cloudFileCache[id];
+  if (!f) { showToast('error', 'File data not found — try reloading the dashboard'); return; }
+  openCloudFile(id, f.filename, f.code);
 }
 
 async function shareAndShowLink(){
@@ -2119,7 +2131,7 @@ function showEditor(){
   document.getElementById('app-page').style.display='block';
   document.getElementById('nav-pills').style.display='flex';
   const _mb=document.getElementById('topbar-mic-btn');
-  if(_mb)_mb.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  if(_mb)_mb.style.display='flex';
   requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); initMobileNav(); });
 }
 function guardedShowEditor(){
@@ -2743,9 +2755,12 @@ async function deleteCloudFile(id) {
   const token = authGetToken();
   if (!token) return;
   try {
-    await fetch(`${API_BASE}/files/delete/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    if (currentPanel === 'dashboard') { renderPanel('dashboard'); }
+    const res = await fetch(`${API_BASE}/files/delete/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    if (!res.ok) { showToast('error', 'Delete failed'); return; }
+    delete _cloudFileCache[id];
     showToast('info', 'File deleted');
+    // Refresh the file list in place without full panel re-render
+    if (currentPanel === 'dashboard') loadDashboardFiles();
   } catch(e) { showToast('error', 'Delete failed'); }
 }
 
