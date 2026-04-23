@@ -43,13 +43,7 @@
   .nav-pill:hover{background:var(--bg4);color:var(--text)}
   .nav-pill.active{background:var(--bg4);color:var(--accent3)}
   .topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
-  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:all 0.3s}
-  .status-dot.listening{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse-dot 1.2s infinite}
-  .status-dot.processing{background:var(--amber);box-shadow:0 0 8px var(--amber)}
-  .status-dot.ai{background:var(--ai);box-shadow:0 0 8px var(--ai);animation:pulse-dot 1s infinite}
-  .status-dot.error{background:var(--red)}
   @keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:0.7}}
-  .status-label{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:90px}
   .btn{padding:7px 14px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:var(--sans);display:flex;align-items:center;gap:6px;white-space:nowrap;border:none}
   .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
   .btn-ghost:hover{background:var(--bg4);color:var(--text)}
@@ -349,7 +343,6 @@
     .topbar { padding: 0 10px; gap: 8px; height: 48px; }
     .logo-text { font-size: 13px; }
     .ai-badge { display: none; }
-    .status-label { display: none; }
     .sep { display: none; }
     .btn { padding: 5px 8px; font-size: 11px; }
     .nav-pills { display: none !important; }
@@ -479,16 +472,7 @@
   }
 
 
-  #topbar-mic-btn{display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
-  #topbar-mic-btn.mic-active{background:rgba(34,211,160,0.15)!important;border-color:var(--green)!important;color:var(--green)!important;box-shadow:0 0 10px rgba(34,211,160,0.3);animation:tmb-pulse 1.4s infinite;}
-  @keyframes tmb-pulse{0%,100%{box-shadow:0 0 5px rgba(34,211,160,0.2);}50%{box-shadow:0 0 15px rgba(34,211,160,0.5);}}
-  #mic-hud{display:none;position:fixed;top:54px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:8px 14px;z-index:500;align-items:center;gap:10px;box-shadow:0 4px 24px rgba(0,0,0,0.5);min-width:220px;max-width:88vw;font-family:var(--mono);font-size:12px;}
-  #mic-hud.show{display:flex;}
-  #mic-hud-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;animation:pulse-dot 1s infinite;}
-  #mic-hud-text{color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  #mic-hud-close{background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;font-size:16px;line-height:1;flex-shrink:0;}
   @media(max-width:768px){
-    #topbar-mic-btn{display:flex!important;}
     #mnav-mic{display:none!important;}
     /* prevent any element causing horizontal overflow */
     .app-layout,#app-page{max-width:100vw;overflow-x:hidden;}
@@ -514,12 +498,6 @@
     </button>
   </div>
   <div class="topbar-right">
-    <button id="topbar-mic-btn" onclick="toggleMic()" title="Toggle microphone">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-      <span id="topbar-mic-label">Mic</span>
-    </button>
-    <div class="status-dot" id="status-dot"></div>
-    <span class="status-label" id="status-label">idle</span>
     <div class="sep"></div>
     <!-- Auth area -->
     <div id="auth-area" style="display:flex;gap:8px;align-items:center">
@@ -881,7 +859,6 @@
 </div>
 
 <div class="toast-wrap" id="toast-wrap"></div>
-<div id="mic-hud"><div id="mic-hud-dot"></div><span id="mic-hud-text">Listening...</span><button id="mic-hud-close" onclick="stopListening()">✕</button></div>
 
 <!-- MOBILE OVERLAY -->
 <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobilePanels()"></div>
@@ -1356,30 +1333,18 @@ const GROUPS = [
 ];
 
 
-// Safe in-memory store for cloud file payloads — avoids inlining code into HTML attributes
-const _cloudFileCache = {};
-
 async function loadDashboardFiles(){
   const el = document.getElementById('cloud-files-list');
   if(!el) return;
   if(!currentUser){ el.innerHTML='<div style="color:var(--text3);font-size:11px">Sign in to see cloud files</div>'; return; }
-  el.innerHTML='<div style="color:var(--text3);font-size:11px">Loading...</div>';
   const files = await loadCloudFiles();
   if(!files || !files.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px">No cloud files yet</div>'; return; }
-  // Cache file data by id so onclick handlers never embed raw code in HTML
-  files.forEach(f => { _cloudFileCache[f.id] = { filename: f.filename, code: f.code }; });
   el.innerHTML = files.map(f=>`
     <div class="file-row">
-      <span class="file-row-name" onclick="openCloudFileById(${f.id})" title="Click to open">${escHtml(f.filename)}</span>
+      <span class="file-row-name" onclick="openCloudFile('${f.id}','${escHtml(f.filename)}',${JSON.stringify(f.code)})" title="Click to open">${escHtml(f.filename)}</span>
       <span class="file-row-date">${new Date(f.updated_at).toLocaleDateString()}</span>
       <button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:4px;color:var(--red)" onclick="deleteCloudFile(${f.id})" title="Delete">✕</button>
     </div>`).join('');
-}
-
-function openCloudFileById(id) {
-  const f = _cloudFileCache[id];
-  if (!f) { showToast('error', 'File data not found — try reloading the dashboard'); return; }
-  openCloudFile(id, f.filename, f.code);
 }
 
 async function shareAndShowLink(){
@@ -1625,8 +1590,6 @@ function attachRecognitionHandlers(r) {
       document.getElementById('transcript-badge').style.display = finalText ? 'none' : 'inline-block';
     }
 
-    const _ht=document.getElementById('mic-hud-text');
-    if(_ht&&isListening)_ht.textContent=(interim||finalText||'Listening...').slice(0,55);
     if (finalText.trim()) {
       if (finalText.trim() === lastFinalTranscript) return;
       lastFinalTranscript = finalText.trim();
@@ -1753,10 +1716,7 @@ async function startListening() {
   }
   document.getElementById('mic-btn')?.classList.add('active');
   if(document.getElementById('mic-state')){document.getElementById('mic-state').textContent=isMobileDevice?'Tap mic to stop':(pushToTalk?'Hold Space to speak':'Listening...');document.getElementById('mic-state').classList.add('active');}
-  const _tb=document.getElementById('topbar-mic-btn');
-  if(_tb){_tb.classList.add('mic-active');document.getElementById('topbar-mic-label').textContent='Stop';}
-  const _hud=document.getElementById('mic-hud');
-  if(_hud){_hud.classList.add('show');document.getElementById('mic-hud-text').textContent='Listening...';}
+
   showToast('info', '🎙 Microphone active');
   if (!isMobileDevice) speak(pushToTalk ? 'Push to talk mode ready' : 'Listening', false);
 }
@@ -1775,10 +1735,7 @@ function stopListening() {
   if(document.getElementById('mic-state')){document.getElementById('mic-state').textContent='Click to start listening';document.getElementById('mic-state').classList.remove('active');}
   document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Say a command...</span>';
   document.getElementById('transcript-badge').style.display = 'none';
-  const _xtb=document.getElementById('topbar-mic-btn');
-  if(_xtb){_xtb.classList.remove('mic-active');document.getElementById('topbar-mic-label').textContent='Mic';}
-  const _xhud=document.getElementById('mic-hud');
-  if(_xhud)_xhud.classList.remove('show');
+    if(_xhud)_xhud.classList.remove('show');
   drawIdleWaveform();
   speak('Microphone off', false);
 }
@@ -2080,11 +2037,7 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 // STATUS / TOAST / BANNER
 
-function setStatus(s){
-  const d=document.getElementById('status-dot'),l=document.getElementById('status-label'); if(!d||!l) return;
-  d.className='status-dot '+s;
-  l.textContent=s==='ai'?'AI thinking...':s;
-}
+function setStatus(s){ /* status dot removed from topbar */ }
 function showToast(type,msg){
   const wrap=document.getElementById('toast-wrap');
   const t=document.createElement('div'); t.className='toast '+type; t.textContent=msg;
@@ -2130,8 +2083,6 @@ function showEditor(){
   document.getElementById('landing-page').style.display='none';
   document.getElementById('app-page').style.display='block';
   document.getElementById('nav-pills').style.display='flex';
-  const _mb=document.getElementById('topbar-mic-btn');
-  if(_mb)_mb.style.display='flex';
   requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); initMobileNav(); });
 }
 function guardedShowEditor(){
@@ -2755,12 +2706,9 @@ async function deleteCloudFile(id) {
   const token = authGetToken();
   if (!token) return;
   try {
-    const res = await fetch(`${API_BASE}/files/delete/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    if (!res.ok) { showToast('error', 'Delete failed'); return; }
-    delete _cloudFileCache[id];
+    await fetch(`${API_BASE}/files/delete/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    if (currentPanel === 'dashboard') { renderPanel('dashboard'); }
     showToast('info', 'File deleted');
-    // Refresh the file list in place without full panel re-render
-    if (currentPanel === 'dashboard') loadDashboardFiles();
   } catch(e) { showToast('error', 'Delete failed'); }
 }
 
