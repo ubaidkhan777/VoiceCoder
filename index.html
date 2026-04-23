@@ -892,10 +892,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
     Editor
   </button>
-  <button class="mobile-nav-btn" id="mnav-mic" onclick="mobileShowMic()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-    Mic
-  </button>
+
   <button class="mobile-nav-btn" id="mnav-ai" onclick="mobileShowAI()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     AI
@@ -1359,7 +1356,7 @@ const GROUPS = [
 ];
 
 
-// Safe in-memory store — avoids embedding raw C++ code inside HTML onclick attributes
+// Safe in-memory store for cloud file payloads — avoids inlining code into HTML attributes
 const _cloudFileCache = {};
 
 async function loadDashboardFiles(){
@@ -1369,6 +1366,7 @@ async function loadDashboardFiles(){
   el.innerHTML='<div style="color:var(--text3);font-size:11px">Loading...</div>';
   const files = await loadCloudFiles();
   if(!files || !files.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px">No cloud files yet</div>'; return; }
+  // Cache file data by id so onclick handlers never embed raw code in HTML
   files.forEach(f => { _cloudFileCache[f.id] = { filename: f.filename, code: f.code }; });
   el.innerHTML = files.map(f=>`
     <div class="file-row">
@@ -2133,7 +2131,7 @@ function showEditor(){
   document.getElementById('app-page').style.display='block';
   document.getElementById('nav-pills').style.display='flex';
   const _mb=document.getElementById('topbar-mic-btn');
-  if(_mb)_mb.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  if(_mb)_mb.style.display='flex';
   requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); initMobileNav(); });
 }
 function guardedShowEditor(){
@@ -2761,6 +2759,7 @@ async function deleteCloudFile(id) {
     if (!res.ok) { showToast('error', 'Delete failed'); return; }
     delete _cloudFileCache[id];
     showToast('info', 'File deleted');
+    // Refresh the file list in place without full panel re-render
     if (currentPanel === 'dashboard') loadDashboardFiles();
   } catch(e) { showToast('error', 'Delete failed'); }
 }
