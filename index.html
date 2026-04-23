@@ -479,7 +479,16 @@
   }
 
 
+  #topbar-mic-btn{display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
+  #topbar-mic-btn.mic-active{background:rgba(34,211,160,0.15)!important;border-color:var(--green)!important;color:var(--green)!important;box-shadow:0 0 10px rgba(34,211,160,0.3);animation:tmb-pulse 1.4s infinite;}
+  @keyframes tmb-pulse{0%,100%{box-shadow:0 0 5px rgba(34,211,160,0.2);}50%{box-shadow:0 0 15px rgba(34,211,160,0.5);}}
+  #mic-hud{display:none;position:fixed;top:54px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:8px 14px;z-index:500;align-items:center;gap:10px;box-shadow:0 4px 24px rgba(0,0,0,0.5);min-width:220px;max-width:88vw;font-family:var(--mono);font-size:12px;}
+  #mic-hud.show{display:flex;}
+  #mic-hud-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;animation:pulse-dot 1s infinite;}
+  #mic-hud-text{color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #mic-hud-close{background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;font-size:16px;line-height:1;flex-shrink:0;}
   @media(max-width:768px){
+    #topbar-mic-btn{display:flex!important;}
     #mnav-mic{display:none!important;}
     /* prevent any element causing horizontal overflow */
     .app-layout,#app-page{max-width:100vw;overflow-x:hidden;}
@@ -505,6 +514,10 @@
     </button>
   </div>
   <div class="topbar-right">
+    <button id="topbar-mic-btn" onclick="toggleMic()" title="Toggle microphone">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <span id="topbar-mic-label">Mic</span>
+    </button>
     <div class="status-dot" id="status-dot"></div>
     <span class="status-label" id="status-label">idle</span>
     <div class="sep"></div>
@@ -868,6 +881,7 @@
 </div>
 
 <div class="toast-wrap" id="toast-wrap"></div>
+<div id="mic-hud"><div id="mic-hud-dot"></div><span id="mic-hud-text">Listening...</span><button id="mic-hud-close" onclick="stopListening()">✕</button></div>
 
 <!-- MOBILE OVERLAY -->
 <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobilePanels()"></div>
@@ -878,7 +892,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
     Editor
   </button>
-
+  <button class="mobile-nav-btn" id="mnav-mic" onclick="mobileShowMic()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    Mic
+  </button>
   <button class="mobile-nav-btn" id="mnav-ai" onclick="mobileShowAI()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     AI
@@ -1610,6 +1627,8 @@ function attachRecognitionHandlers(r) {
       document.getElementById('transcript-badge').style.display = finalText ? 'none' : 'inline-block';
     }
 
+    const _ht=document.getElementById('mic-hud-text');
+    if(_ht&&isListening)_ht.textContent=(interim||finalText||'Listening...').slice(0,55);
     if (finalText.trim()) {
       if (finalText.trim() === lastFinalTranscript) return;
       lastFinalTranscript = finalText.trim();
@@ -1736,6 +1755,10 @@ async function startListening() {
   }
   document.getElementById('mic-btn')?.classList.add('active');
   if(document.getElementById('mic-state')){document.getElementById('mic-state').textContent=isMobileDevice?'Tap mic to stop':(pushToTalk?'Hold Space to speak':'Listening...');document.getElementById('mic-state').classList.add('active');}
+  const _tb=document.getElementById('topbar-mic-btn');
+  if(_tb){_tb.classList.add('mic-active');document.getElementById('topbar-mic-label').textContent='Stop';}
+  const _hud=document.getElementById('mic-hud');
+  if(_hud){_hud.classList.add('show');document.getElementById('mic-hud-text').textContent='Listening...';}
   showToast('info', '🎙 Microphone active');
   if (!isMobileDevice) speak(pushToTalk ? 'Push to talk mode ready' : 'Listening', false);
 }
@@ -1754,6 +1777,9 @@ function stopListening() {
   if(document.getElementById('mic-state')){document.getElementById('mic-state').textContent='Click to start listening';document.getElementById('mic-state').classList.remove('active');}
   document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Say a command...</span>';
   document.getElementById('transcript-badge').style.display = 'none';
+  const _xtb=document.getElementById('topbar-mic-btn');
+  if(_xtb){_xtb.classList.remove('mic-active');document.getElementById('topbar-mic-label').textContent='Mic';}
+  const _xhud=document.getElementById('mic-hud');
   if(_xhud)_xhud.classList.remove('show');
   drawIdleWaveform();
   speak('Microphone off', false);
@@ -2106,6 +2132,8 @@ function showEditor(){
   document.getElementById('landing-page').style.display='none';
   document.getElementById('app-page').style.display='block';
   document.getElementById('nav-pills').style.display='flex';
+  const _mb=document.getElementById('topbar-mic-btn');
+  if(_mb)_mb.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
   requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); initMobileNav(); });
 }
 function guardedShowEditor(){
