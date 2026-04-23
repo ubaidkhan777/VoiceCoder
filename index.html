@@ -43,7 +43,13 @@
   .nav-pill:hover{background:var(--bg4);color:var(--text)}
   .nav-pill.active{background:var(--bg4);color:var(--accent3)}
   .topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:all 0.3s}
+  .status-dot.listening{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse-dot 1.2s infinite}
+  .status-dot.processing{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .status-dot.ai{background:var(--ai);box-shadow:0 0 8px var(--ai);animation:pulse-dot 1s infinite}
+  .status-dot.error{background:var(--red)}
   @keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:0.7}}
+  .status-label{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:90px}
   .btn{padding:7px 14px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:var(--sans);display:flex;align-items:center;gap:6px;white-space:nowrap;border:none}
   .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
   .btn-ghost:hover{background:var(--bg4);color:var(--text)}
@@ -343,6 +349,7 @@
     .topbar { padding: 0 10px; gap: 8px; height: 48px; }
     .logo-text { font-size: 13px; }
     .ai-badge { display: none; }
+    .status-label { display: none; }
     .sep { display: none; }
     .btn { padding: 5px 8px; font-size: 11px; }
     .nav-pills { display: none !important; }
@@ -498,6 +505,8 @@
     </button>
   </div>
   <div class="topbar-right">
+    <div class="status-dot" id="status-dot"></div>
+    <span class="status-label" id="status-label">idle</span>
     <div class="sep"></div>
     <!-- Auth area -->
     <div id="auth-area" style="display:flex;gap:8px;align-items:center">
@@ -1333,18 +1342,29 @@ const GROUPS = [
 ];
 
 
+// Safe in-memory store — avoids embedding raw C++ code inside HTML onclick attributes
+const _cloudFileCache = {};
+
 async function loadDashboardFiles(){
   const el = document.getElementById('cloud-files-list');
   if(!el) return;
   if(!currentUser){ el.innerHTML='<div style="color:var(--text3);font-size:11px">Sign in to see cloud files</div>'; return; }
+  el.innerHTML='<div style="color:var(--text3);font-size:11px">Loading...</div>';
   const files = await loadCloudFiles();
   if(!files || !files.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px">No cloud files yet</div>'; return; }
+  files.forEach(f => { _cloudFileCache[f.id] = { filename: f.filename, code: f.code }; });
   el.innerHTML = files.map(f=>`
     <div class="file-row">
-      <span class="file-row-name" onclick="openCloudFile('${f.id}','${escHtml(f.filename)}',${JSON.stringify(f.code)})" title="Click to open">${escHtml(f.filename)}</span>
+      <span class="file-row-name" onclick="openCloudFileById(${f.id})" title="Click to open">${escHtml(f.filename)}</span>
       <span class="file-row-date">${new Date(f.updated_at).toLocaleDateString()}</span>
       <button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:4px;color:var(--red)" onclick="deleteCloudFile(${f.id})" title="Delete">✕</button>
     </div>`).join('');
+}
+
+function openCloudFileById(id) {
+  const f = _cloudFileCache[id];
+  if (!f) { showToast('error', 'File data not found — try reloading the dashboard'); return; }
+  openCloudFile(id, f.filename, f.code);
 }
 
 async function shareAndShowLink(){
@@ -1716,7 +1736,6 @@ async function startListening() {
   }
   document.getElementById('mic-btn')?.classList.add('active');
   if(document.getElementById('mic-state')){document.getElementById('mic-state').textContent=isMobileDevice?'Tap mic to stop':(pushToTalk?'Hold Space to speak':'Listening...');document.getElementById('mic-state').classList.add('active');}
-
   showToast('info', '🎙 Microphone active');
   if (!isMobileDevice) speak(pushToTalk ? 'Push to talk mode ready' : 'Listening', false);
 }
@@ -1735,7 +1754,7 @@ function stopListening() {
   if(document.getElementById('mic-state')){document.getElementById('mic-state').textContent='Click to start listening';document.getElementById('mic-state').classList.remove('active');}
   document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Say a command...</span>';
   document.getElementById('transcript-badge').style.display = 'none';
-    if(_xhud)_xhud.classList.remove('show');
+  if(_xhud)_xhud.classList.remove('show');
   drawIdleWaveform();
   speak('Microphone off', false);
 }
@@ -2037,7 +2056,11 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 // STATUS / TOAST / BANNER
 
-function setStatus(s){ /* status dot removed from topbar */ }
+function setStatus(s){
+  const d=document.getElementById('status-dot'),l=document.getElementById('status-label'); if(!d||!l) return;
+  d.className='status-dot '+s;
+  l.textContent=s==='ai'?'AI thinking...':s;
+}
 function showToast(type,msg){
   const wrap=document.getElementById('toast-wrap');
   const t=document.createElement('div'); t.className='toast '+type; t.textContent=msg;
@@ -2706,9 +2729,11 @@ async function deleteCloudFile(id) {
   const token = authGetToken();
   if (!token) return;
   try {
-    await fetch(`${API_BASE}/files/delete/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    if (currentPanel === 'dashboard') { renderPanel('dashboard'); }
+    const res = await fetch(`${API_BASE}/files/delete/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    if (!res.ok) { showToast('error', 'Delete failed'); return; }
+    delete _cloudFileCache[id];
     showToast('info', 'File deleted');
+    if (currentPanel === 'dashboard') loadDashboardFiles();
   } catch(e) { showToast('error', 'Delete failed'); }
 }
 
