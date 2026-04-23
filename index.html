@@ -2119,7 +2119,7 @@ function showEditor(){
   document.getElementById('app-page').style.display='block';
   document.getElementById('nav-pills').style.display='flex';
   const _mb=document.getElementById('topbar-mic-btn');
-  if(_mb)_mb.style.display='flex';
+  if(_mb)_mb.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
   requestAnimationFrame(()=>{ updateLineNumbers(); drawIdleWaveform(); renderTabs(); renderPanel(currentPanel); initMobileNav(); });
 }
 function guardedShowEditor(){
